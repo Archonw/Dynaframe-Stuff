@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html data-bs-theme="light" lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <title>Scheduler</title>
+    <meta http-equiv="Cache-Control" content="no-store">
+    <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
+</head>
+<body>
+    <section class="py-4 py-xl-5">
+        <div class="container">
+            <div class="text-white bg-dark border rounded border-0 p-4 p-md-5">
+                <h2 class="fw-bold text-white mb-3">Welcome to the Scheduler!</h2>
+                <p class="mb-4">Please select a time you'd like Dynaframe to run an action, and then an action to run at that time.</p>
+                
+                <!-- Screen Control Section -->
+                <h3 class="text-white">Screen Control</h3>
+                <form style="padding-top: 22px;">
+                    <div>
+                        <input class="form-control" id="timeInput" type="time" name="timeInput" style="width: 300px;">
+                        <input class="form-control d-none" type="text" value="command" name="action">
+                        <select class="form-select" id="commandandparam" style="padding-left: 5px;width: 300px;" name="commandandparam">
+                            <option value="SCREENSTATE,false" selected="">Turn Off Frame</option>
+                            <option value="SCREENSTATE,true">Turn On Frame</option>
+                            <option value="GETFONTS">Get Fonts (Test)</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" id="addTime" type="button">Add to Schedule</button>
+                </form>
+
+                <!-- Playlist Control Section -->
+                <h3 class="text-white mt-4">Playlist Control</h3>
+                <form style="padding-top: 22px;">
+                    <div>
+                        <input class="form-control" id="playlistTimeInput" type="time" name="playlistTimeInput" style="width: 300px;">
+                        <select class="form-select" id="playlistSelect" style="padding-left: 5px;width: 300px;" name="playlistSelect">
+                            <!-- This will be populated dynamically -->
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" id="addPlaylist" type="button">Add Playlist to Schedule</button>
+                </form>
+
+                <!-- Clear Schedule Button -->
+                <button class="btn btn-danger mt-4" id="clearButton" type="button">Clear All Schedules</button>
+            </div>
+        </div>
+    </section>
+
+    <div class="table-responsive" id="json-table">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Command</th>
+                    <th>Parameters</th>
+                    <th>Delete</th> <!-- Neue Spalte für den Delete-Button -->
+                </tr>
+            </thead>
+            <tbody id="scheduleTableBody"></tbody>
+        </table>
+    </div>
+
+    <script src="assets/bootstrap/js/bootstrap.min.js"></script>
+    <script src="assets/js/main.js"></script>
+    <script>
+        // Funktion zum Hinzufügen von Einträgen zur Tabelle
+        function addEntryToTable(entry) {
+            const tableBody = document.getElementById('scheduleTableBody');
+            const row = document.createElement('tr');
+
+            row.innerHTML = `
+                <td>${entry.time}</td>
+                <td>${entry.command}</td>
+                <td>${entry.parameter}</td>
+                <td><button class="btn btn-danger delete-btn" data-id="${entry.id}">Delete</button></td>
+            `;
+            tableBody.appendChild(row);
+        }
+
+        // Event-Listener für Delete-Buttons
+        document.addEventListener('click', function(event) {
+            if (event.target.classList.contains('delete-btn')) {
+                const deleteId = event.target.getAttribute('data-id');
+                if (confirm(`Are you sure you want to delete entry with ID ${deleteId}?`)) {
+                    fetch(`/path/to/dfschedule.py?deleteId=${deleteId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                alert(`Entry with ID ${deleteId} deleted.`);
+                                location.reload(); // Tabelle neu laden
+                            } else {
+                                alert(`Failed to delete entry: ${data.message}`);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                        });
+                }
+            }
+        });
+
+        // Hier kannst du eine Funktion hinzufügen, um die Tabelle beim Laden der Seite mit den aktuellen Zeitplaneinträgen zu füllen
+        function loadSchedule() {
+            // Beispiel-Implementierung: Hole die Daten von einem API-Endpunkt oder einer lokalen Datei
+            fetch('/home/pi/Dynaframe/Assets/dfplugin/scheduler/schedule.json')
+                .then(response => response.json())
+                .then(data => {
+                    data.forEach(addEntryToTable);
+                });
+        }
+
+        // Lädt den Zeitplan beim Start
+        loadSchedule();
+    </script>
+</body>
+</html>
+

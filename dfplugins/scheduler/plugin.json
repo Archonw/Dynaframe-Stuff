@@ -1,0 +1,9 @@
+{
+  "IsEnabled": true,
+  "PluginType": 1,
+  "FilePath": "/home/pi/Dynaframe/Assets/dfplugins/scheduler/dfschedule.py",
+  "JSONPath": "/home/pi/Dynaframe/Assets/dfplugins/scheduler/plugin.json",
+  "ConfigPath": "/home/pi/Dynaframe/Assets/dfplugins/scheduler/config.json",
+  "Name": "scheduler",
+  "Description": "Allows scheduling tasks such as turning the screen on/off"
+}
