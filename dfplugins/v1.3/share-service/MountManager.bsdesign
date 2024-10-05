@@ -1,0 +1,46 @@
+{
+    "type": "Form",
+    "layout": "vertical",
+    "elements": [
+        {
+            "type": "TextInput",
+            "id": "sharePath",
+            "label": "Share Path",
+            "placeholder": "e.g. 192.168.1.100:/sharedfolder"
+        },
+        {
+            "type": "TextInput",
+            "id": "mountPath",
+            "label": "Mount Path",
+            "placeholder": "e.g. /mnt/nfsfolder"
+        },
+        {
+            "type": "Select",
+            "id": "shareType",
+            "label": "Share Type",
+            "options": [
+                {
+                    "label": "NFS",
+                    "value": "nfs"
+                },
+                {
+                    "label": "SMB",
+                    "value": "smb"
+                }
+            ]
+        },
+        {
+            "type": "Button",
+            "id": "mountButton",
+            "label": "Mount Share",
+            "action": "submit"
+        },
+        {
+            "type": "Button",
+            "id": "clearButton",
+            "label": "Clear Mounts",
+            "action": "clear"
+        }
+    ]
+}
+

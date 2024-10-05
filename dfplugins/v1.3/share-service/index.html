@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html data-bs-theme="light" lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <title>SMB/NFS Manager</title>
+    <meta http-equiv="Cache-Control" content="no-store">
+    <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
+</head>
+<body>
+    <section class="py-4 py-xl-5">
+        <div class="container">
+            <div class="text-white bg-dark border rounded border-0 p-4 p-md-5">
+                <h2 class="fw-bold text-white mb-3">Mount SMB/NFS Share</h2>
+                <form id="mountForm" style="padding-top: 22px;">
+                    <div>
+                        <label for="sharePath" class="form-label">Share Path (Example: NFS - 192.168.1.100:/folder, SMB - //192.168.1.101/share)</label>
+                        <input class="form-control" id="sharePath" type="text" placeholder="Enter the share path" name="sharePath" style="width: 300px;">
+                        
+                        <label for="mountPath" class="form-label mt-3">Mount Path (Only enter the folder name, e.g., 'myfolder' will be mounted to /home/pi/myfolder)</label>
+                        <input class="form-control" id="mountPath" type="text" placeholder="Enter folder name for mount" name="mountPath" style="width: 300px;">
+
+                        <label for="shareType" class="form-label mt-3">Share Type</label>
+                        <select class="form-select" id="shareType" style="padding-left: 5px;width: 300px;" name="shareType">
+                            <option value="nfs">NFS</option>
+                            <option value="smb" selected>SMB</option>
+                        </select>
+
+                        <label for="username" class="form-label mt-3">Username (Only for SMB)</label>
+                        <input class="form-control" id="username" type="text" placeholder="Enter username for SMB" name="username" style="width: 300px;">
+
+                        <label for="password" class="form-label mt-3">Password (Only for SMB)</label>
+                        <input class="form-control" id="password" type="password" placeholder="Enter password for SMB" name="password" style="width: 300px;">
+                    </div>
+                    <button class="btn btn-primary mt-3" id="mountButton" type="button">Mount Share</button>
+                </form>
+                <div id="waitMessage" class="text-warning mt-3" style="display: none;">Please wait...</div>
+
+                <h3 class="fw-bold text-white mt-5">Currently Mounted Shares</h3>
+                <table class="table text-white">
+                    <thead>
+                        <tr>
+                            <th>Share Path</th>
+                            <th>Mount Path</th>
+                            <th>Share Type</th> <!-- Neue Spalte für Share-Typ -->
+                            <th>Unmount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mountsTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <script src="assets/bootstrap/js/bootstrap.min.js"></script>
+    <script>
+        // Fetch the currently mounted shares when the page loads
+        window.onload = function() {
+            fetchMountedShares();
+        };
+
+        // Fetch the mounted shares from the server
+        function fetchMountedShares() {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/mounted-shares', true);
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    var mountedShares = JSON.parse(xhr.responseText);
+                    var mountsTable = document.getElementById('mountsTable');
+                    mountsTable.innerHTML = '';
+
+                    mountedShares.forEach(function(share) {
+                        var row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${share.sharePath}</td>
+                            <td>${share.mountPath}</td>
+                            <td>${share.shareType}</td> <!-- Share-Typ anzeigen -->
+                            <td>
+                                <button class="btn btn-danger unmountBtn" data-mount-path="${share.mountPath}">Unmount</button>
+                                <span class="text-warning unmountWait" style="display: none;">Please wait...</span>
+                            </td>
+                        `;
+                        mountsTable.appendChild(row);
+                    });
+
+                    // Add event listeners to all unmount buttons
+                    document.querySelectorAll('.unmountBtn').forEach(button => {
+                        button.addEventListener('click', function() {
+                            unmountShare(this.getAttribute('data-mount-path'), this);
+                        });
+                    });
+                }
+            };
+            xhr.send();
+        }
+
+        // Unmount a share and delete the mount directory
+        function unmountShare(mountPath, button) {
+            // Disable the button and show the wait message
+            button.disabled = true;
+            button.nextElementSibling.style.display = 'inline';
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/unmount-share', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onload = function() {
+                // Enable the button and hide the wait message
+                button.disabled = false;
+                button.nextElementSibling.style.display = 'none';
+
+                if (xhr.status === 200) {
+                    alert('Share unmounted successfully');
+                    fetchMountedShares();  // Refresh the mounted shares list
+                } else {
+                    alert('Error unmounting share: ' + xhr.responseText);
+                }
+            };
+            xhr.send(JSON.stringify({ mountPath: mountPath }));
+        }
+
+        // JavaScript to handle mount form submission
+        document.getElementById('mountButton').addEventListener('click', function() {
+            var sharePath = document.getElementById('sharePath').value;
+            var mountPath = document.getElementById('mountPath').value;
+
+            // Validate that sharePath and mountPath are not empty
+            if (sharePath.trim() === "" || mountPath.trim() === "") {
+                alert("Please fill in both the Share Path and the Mount Path fields.");
+                return;  // Stop the form submission
+            }
+
+            var shareType = document.getElementById('shareType').value;
+            var username = document.getElementById('username').value;
+            var password = document.getElementById('password').value;
+
+            var data = {
+                sharePath: sharePath,
+                mountPath: mountPath,
+                shareType: shareType,
+                username: username,
+                password: password
+            };
+
+            // Show the "Please wait..." message
+            document.getElementById('waitMessage').style.display = 'block';
+            // Disable the mount button
+            this.disabled = true;
+
+            // Send the data to the Python script using an AJAX request
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/mount-share', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    // Hide the "Please wait..." message
+                    document.getElementById('waitMessage').style.display = 'none';
+                    // Enable the mount button
+                    document.getElementById('mountButton').disabled = false;
+
+                    if (xhr.status === 200) {
+                        alert('Share mounted successfully!');
+                        fetchMountedShares();  // Refresh the mounted shares list
+                    } else {
+                        alert('Error mounting share: ' + xhr.responseText);
+                    }
+                }
+            };
+            xhr.send(JSON.stringify(data));
+        });
+    </script>
+</body>
+</html>
+
