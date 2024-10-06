@@ -1,0 +1,8 @@
+{
+  "IsEnabled": true,
+  "PluginType": 1,
+  "FilePath": "/home/pi/Dynaframe/Assets/dfplugins/fixedip-config/fixedip-config.py",
+  "JSONPath": "/home/pi/Dynaframe/Assets/dfplugins/fixedip-config/plugin.json",
+  "Name": "fixedip-config",
+  "Description": "Allows setting a static IP"
+}

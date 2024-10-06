@@ -1,0 +1,8 @@
+{
+  "IsEnabled": true,
+  "PluginType": 1,
+  "FilePath": "/home/pi/Dynaframe/Assets/dfplugins/fixedip/fixedip.py",
+  "JSONPath": "/home/pi/Dynaframe/Assets/dfplugins/fixedip/plugin.json",
+  "Name": "fixedip",
+  "Description": "Allows setting a fixed ip to the Pi"
+}

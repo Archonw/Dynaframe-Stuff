@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP Konfiguration</title>
+    <script src="/assets/js/main.js"></script>
+</head>
+<body>
+    <h1>IP Konfiguration</h1>
+    <form id="ipForm">
+        <label for="eth0_dhcp">DHCP für LAN (eth0)</label>
+        <input type="checkbox" id="eth0_dhcp" name="eth0_dhcp"><br>
+
+        <label for="eth0_ip">IP-Adresse LAN:</label>
+        <input type="text" id="eth0_ip" name="eth0_ip" disabled><br>
+
+        <label for="eth0_netmask">Netzmaske LAN:</label>
+        <input type="text" id="eth0_netmask" name="eth0_netmask" disabled><br>
+
+        <label for="eth0_gateway">Gateway LAN:</label>
+        <input type="text" id="eth0_gateway" name="eth0_gateway" disabled><br>
+
+        <label for="eth0_dns">DNS LAN:</label>
+        <input type="text" id="eth0_dns" name="eth0_dns" disabled><br><br>
+
+        <label for="wlan0_dhcp">DHCP für WLAN (wlan0)</label>
+        <input type="checkbox" id="wlan0_dhcp" name="wlan0_dhcp"><br>
+
+        <label for="wlan0_ip">IP-Adresse WLAN:</label>
+        <input type="text" id="wlan0_ip" name="wlan0_ip" disabled><br>
+
+        <label for="wlan0_netmask">Netzmaske WLAN:</label>
+        <input type="text" id="wlan0_netmask" name="wlan0_netmask" disabled><br>
+
+        <label for="wlan0_gateway">Gateway WLAN:</label>
+        <input type="text" id="wlan0_gateway" name="wlan0_gateway" disabled><br>
+
+        <label for="wlan0_dns">DNS WLAN:</label>
+        <input type="text" id="wlan0_dns" name="wlan0_dns" disabled><br><br>
+
+        <button type="submit">Speichern</button>
+    </form>
+
+    <div id="message"></div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            fetch('/get_ip_settings')
+                .then(response => response.json())
+                .then(data => {
+                    // Eth0
+                    const eth0 = data.eth0;
+                    document.getElementById('eth0_ip').value = eth0.ip || '';
+                    document.getElementById('eth0_netmask').value = eth0.netmask || '';
+                    document.getElementById('eth0_gateway').value = eth0.gateway || '';
+                    document.getElementById('eth0_dns').value = eth0.dns || '';
+
+                    // Wlan0
+                    const wlan0 = data.wlan0;
+                    document.getElementById('wlan0_ip').value = wlan0.ip || '';
+                    document.getElementById('wlan0_netmask').value = wlan0.netmask || '';
+                    document.getElementById('wlan0_gateway').value = wlan0.gateway || '';
+                    document.getElementById('wlan0_dns').value = wlan0.dns || '';
+
+                    // Check if DHCP is enabled
+                    document.getElementById('eth0_dhcp').checked = !eth0.ip; // DHCP is on if IP is not set
+                    document.getElementById('wlan0_dhcp').checked = !wlan0.ip;
+
+                    // Disable fields if DHCP is enabled
+                    toggleFields('eth0');
+                    toggleFields('wlan0');
+                });
+
+            document.getElementById('eth0_dhcp').addEventListener('change', function () {
+                toggleFields('eth0');
+            });
+
+            document.getElementById('wlan0_dhcp').addEventListener('change', function () {
+                toggleFields('wlan0');
+            });
+
+            document.getElementById('ipForm').addEventListener('submit', function (e) {
+                e.preventDefault();
+                saveIPSettings();
+            });
+        });
+
+        function toggleFields(interfaceName) {
+            const isDhcpChecked = document.getElementById(interfaceName + '_dhcp').checked;
+            document.getElementById(interfaceName + '_ip').disabled = isDhcpChecked;
+            document.getElementById(interfaceName + '_netmask').disabled = isDhcpChecked;
+            document.getElementById(interfaceName + '_gateway').disabled = isDhcpChecked;
+            document.getElementById(interfaceName + '_dns').disabled = isDhcpChecked;
+        }
+
+        function saveIPSettings() {
+            const eth0Data = {
+                interface: 'eth0',
+                dhcp: document.getElementById('eth0_dhcp').checked,
+                ip: document.getElementById('eth0_ip').value,
+                netmask: document.getElementById('eth0_netmask').value,
+                gateway: document.getElementById('eth0_gateway').value,
+                dns: document.getElementById('eth0_dns').value
+            };
+
+            const wlan0Data = {
+                interface: 'wlan0',
+                dhcp: document.getElementById('wlan0_dhcp').checked,
+                ip: document.getElementById('wlan0_ip').value,
+                netmask: document.getElementById('wlan0_netmask').value,
+                gateway: document.getElementById('wlan0_gateway').value,
+                dns: document.getElementById('wlan0_dns').value
+            };
+
+            fetch('/set_ip', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify([eth0Data, wlan0Data])
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('message').textContent = data.message || data.error;
+            });
+        }
+    </script>
+</body>
+</html>
+
