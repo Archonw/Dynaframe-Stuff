@@ -13,6 +13,7 @@ Automatic installation script for:
 		wget -O - https://raw.githubusercontent.com/Archonw/Dynaframe-Stuff/main/scripts/install_dynaframe_monitor.sh | sudo bash
 	 
 
+
 Links to documentations:
 
 1. display-on-off-shutdown.py
