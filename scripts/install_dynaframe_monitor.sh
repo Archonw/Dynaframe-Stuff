@@ -13,6 +13,7 @@ cat <<EOT > /etc/systemd/system/dynaframe-monitor.service
 Description=Überwachung des Dynaframe-Prozesses
 
 [Service]
+ExecStartPre=/bin/sleep 120  # Warte 2 Minuten vor dem Start
 ExecStart=/opt/dynaframe/dynaframe_monitor.sh
 Restart=always
 
