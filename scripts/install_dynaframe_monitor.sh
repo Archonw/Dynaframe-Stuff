@@ -11,6 +11,7 @@ chmod +x /opt/dynaframe/dynaframe_monitor.sh
 cat <<EOT > /etc/systemd/system/dynaframe-monitor.service
 [Unit]
 Description=Überwachung des Dynaframe-Prozesses
+After=network.target multi-user.target
 
 [Service]
 ExecStartPre=/bin/sleep 120  # Warte 2 Minuten vor dem Start
