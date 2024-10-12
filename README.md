@@ -4,8 +4,11 @@ Hello,
 here you can find some stuff for your Dynaframe. 
 
 
+Automatic installation script for:
+
+	1. Dynaframe Monitoring: Check if Dynaframe is still running. If not, a reboot is carried out and an entry is made in the log under /home/pi/Dynaframe/dynaframe_monitor.log 
 
 Links to documentations:
-1. display-on-off-shutdown.py
-   
-https://bookstack.borghoff.ddnss.de/books/dynaframe-pro/chapter/buttons
+	1. display-on-off-shutdown.py
+
+	https://bookstack.borghoff.ddnss.de/books/dynaframe-pro/chapter/buttons
