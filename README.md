@@ -1,7 +1,10 @@
 # Dynaframe-Stuff
 
+![my_first_Frame](images/Portrait.jpg)
+
+
 Hello,
-here you can find some stuff for your Dynaframe. 
+here you can find some stuff for your Dynaframe. -
 
 
 Automatic installation script for:
