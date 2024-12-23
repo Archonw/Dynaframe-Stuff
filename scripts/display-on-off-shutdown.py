@@ -37,7 +37,7 @@ def released(btn):
         toggle_display()
     btn.was_held = False
 
-btn = Button(19, hold_time=4)  # Set your GPIO number and hold time here
+btn = Button(19, hold_time=4)  # Set your GPIO number and hold time for the long button press here
 
 btn.when_held = held
 btn.when_released = released
