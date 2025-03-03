@@ -15,3 +15,8 @@ cd ~
 wget https://raw.githubusercontent.com/ugotapi/wayland-pagepi/main/config.yaml
 sudo cp /home/pi/config.yaml /etc/interception/udevmon.d/config.yaml
 sudo systemctl restart udevmon
+
+# Cronjob hinzufügen, falls nicht schon vorhanden
+if ! sudo crontab -l 2>/dev/null | grep -q "@reboot systemctl restart udevmon"; then
+    (sudo crontab -l 2>/dev/null; echo "@reboot systemctl restart udevmon") | sudo crontab -
+fi
