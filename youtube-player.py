@@ -79,7 +79,7 @@ def play_videos():
                 encoded_url = urllib.parse.quote(video['url'], safe='')
                 cmd = [
                     "curl", "-X", "GET",
-                    f"http://192.168.178.77:5000/api/PlayFileAPI/PlayFullDirectVideoUrl?URL={encoded_url}&TurnOffAutomaticMode=true",
+                    f"http://localhost:5000/api/PlayFileAPI/PlayFullDirectVideoUrl?URL={encoded_url}&TurnOffAutomaticMode=true",
                     "-H", "accept: */*"
                 ]
                 subprocess.run(cmd)
@@ -90,8 +90,8 @@ def play_videos():
 
 @app.route('/stop', methods=['POST'])
 def stop_playback():
-    subprocess.run(["curl", "-X", "GET", "http://192.168.178.77:5000/api/PlaylistAPI/GoNext", "-H", "accept: */*"])
-    subprocess.run(["curl", "-X", "POST", "http://192.168.178.77:5000/api/AppSettingAPI/SetAppSetting?name=AutomaticMode&value=true", "-H", "accept: */*", "-d", ""])  
+    subprocess.run(["curl", "-X", "GET", "http://localhost:5000/api/PlaylistAPI/GoNext", "-H", "accept: */*"])
+    subprocess.run(["curl", "-X", "POST", "http://localhost:5000/api/AppSettingAPI/SetAppSetting?name=AutomaticMode&value=true", "-H", "accept: */*", "-d", ""])  
     return jsonify({"status": "stopped"})
 
 # Neue Route zum Bearbeiten der URLs
