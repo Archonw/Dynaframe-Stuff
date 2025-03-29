@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Player</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .video-list {
+            list-style: none;
+            padding: 0;
+        }
+        .video-item {
+            margin: 10px 0;
+        }
+        .controls {
+            margin-top: 20px;
+        }
+        .video-item input[type="number"] {
+            width: 60px;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>YouTube Player</h1>
+    <div class="video-selection">
+        <button onclick="loadVideos()">Load Videos</button>
+        <ul class="video-list" id="video-list"></ul>
+    </div>
+
+    <div class="global-time">
+        <label for="global-time">Global Time (Sec):</label>
+        <input type="number" id="global-time" value="30">
+        <button onclick="applyGlobalTime()">Apply Global Time</button>
+    </div>
+    
+    <div class="controls">
+        <button onclick="playVideos()">Play Selected Videos</button>
+        <button onclick="stopPlayback()">Stop</button>
+    </div>
+
+    <!-- Button zum Bearbeiten der URLs -->
+    <div class="controls">
+        <button onclick="window.location.href='/edit-urls'">Edit URLs</button>
+    </div>
+
+    <script>
+        let selectedVideos = [];
+        let videoTimes = {}; // Object to hold the individual times for each video
+
+        function loadVideos() {
+            fetch('/load_videos')
+                .then(response => response.json())
+                .then(data => {
+                    const videoList = document.getElementById('video-list');
+                    videoList.innerHTML = '';  // Clear the list
+                    if (data.status === "error") {
+                        alert(data.message);
+                    } else {
+                        data.forEach((video, index) => {
+                            const li = document.createElement('li');
+                            li.className = 'video-item';
+                            li.innerHTML = `
+                                <input type="checkbox" value="${video.url}" onchange="updateSelection('${video.url}', ${index})" /> 
+                                ${video.title} - 
+                                <input type="number" id="time-${index}" value="${video.time}" oninput="updateTime('${video.url}', ${index})" /> Sec
+                            `;
+                            videoList.appendChild(li);
+                        });
+                    }
+                })
+                .catch(error => console.error('Error loading videos:', error));
+        }
+
+        function updateSelection(url, index) {
+            const checkbox = document.querySelector(`input[type="checkbox"][value="${url}"]`);
+            const isChecked = checkbox.checked;
+            if (isChecked) {
+                selectedVideos.push(url);
+            } else {
+                selectedVideos = selectedVideos.filter(video => video !== url);
+            }
+        }
+
+        function updateTime(url, index) {
+            const timeInput = document.getElementById(`time-${index}`);
+            const timeValue = timeInput.value;
+            videoTimes[url] = timeValue;
+        }
+
+        function applyGlobalTime() {
+            const globalTime = document.getElementById('global-time').value;
+            selectedVideos.forEach((url, index) => {
+                const timeInput = document.getElementById(`time-${index}`);
+                timeInput.value = globalTime;
+                videoTimes[url] = globalTime;
+            });
+        }
+
+        function playVideos() {
+            const videosToPlay = selectedVideos.map(url => {
+                return {
+                    url: url,
+                    time: videoTimes[url] || 30 // Default to 30 if no specific time is set
+                };
+            });
+
+            fetch('/set_videos', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ videos: videosToPlay })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    fetch('/play', { method: 'POST' })
+                        .then(response => response.json())
+                        .then(data => console.log('Playback started:', data))
+                        .catch(error => console.error('Error playing videos:', error));
+                }
+            })
+            .catch(error => console.error('Error setting videos:', error));
+        }
+
+        function stopPlayback() {
+            fetch('/stop', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => console.log('Playback stopped:', data))
+                .catch(error => console.error('Error stopping playback:', error));
+        }
+    </script>
+</body>
+</html>

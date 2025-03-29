@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit YouTube URLs</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .video-list {
+            list-style: none;
+            padding: 0;
+        }
+        .video-item {
+            margin: 10px 0;
+        }
+        .controls {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Edit YouTube URLs</h1>
+    <div class="video-selection">
+        <h2>Delete Selected URLs</h2>
+        <ul class="video-list" id="video-list">
+            {% for url in urls %}
+                <li class="video-item">
+                    <input type="checkbox" value="{{ url }}" onchange="updateSelection('{{ url }}')"> {{ url }}
+                </li>
+            {% endfor %}
+        </ul>
+        <button onclick="deleteSelected()">Delete Selected URLs</button>
+    </div>
+
+    <div class="add-url">
+        <h2>Add New URL</h2>
+        <input type="text" id="new-url" placeholder="Enter new YouTube URL">
+        <button onclick="addUrl()">Add New URL</button>
+    </div>
+
+    <!-- Button to go back to YouTube Player -->
+    <div class="controls">
+        <a href="/"><button>Back to YouTube Player</button></a>
+    </div>
+
+    <script>
+        let selectedVideos = [];
+
+        // Update the selected video list
+        function updateSelection(url) {
+            const checkbox = document.querySelector(`input[type="checkbox"][value="${url}"]`);
+            const isChecked = checkbox.checked;
+            if (isChecked) {
+                selectedVideos.push(url);
+            } else {
+                selectedVideos = selectedVideos.filter(video => video !== url);
+            }
+        }
+
+        // Add a new URL
+        function addUrl() {
+            const newUrl = document.getElementById('new-url').value;
+            if (!newUrl.trim()) {
+                alert("Please fill in the 'Add New URL' field.");
+                return;
+            }
+
+            fetch('/edit-urls', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 'new-url': newUrl })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    location.reload(); // Reload the page to show new URL
+                }
+            })
+            .catch(error => console.error('Error adding URL:', error));
+        }
+
+        // Delete selected URLs
+        function deleteSelected() {
+            if (selectedVideos.length === 0) {
+                alert("No URLs selected for deletion.");
+                return;
+            }
+
+            fetch('/edit-urls', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 'delete': selectedVideos })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    location.reload(); // Reload the page to update the list
+                }
+            })
+            .catch(error => console.error('Error deleting URLs:', error));
+        }
+    </script>
+</body>
+</html>
