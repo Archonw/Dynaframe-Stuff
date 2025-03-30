@@ -28,6 +28,8 @@
     <h1>YouTube Player</h1>
     <div class="video-selection">
         <button onclick="loadVideos()">Load Videos</button>
+        <button onclick="selectAll()">Select All</button>  
+        <p id="loading-message" style="display: none; color: blue;">Videos werden geladen...</p>
         <ul class="video-list" id="video-list"></ul>
     </div>
 
@@ -42,21 +44,26 @@
         <button onclick="stopPlayback()">Stop</button>
     </div>
 
-    <!-- Button zum Bearbeiten der URLs -->
     <div class="controls">
         <button onclick="window.location.href='/edit-urls'">Edit URLs</button>
     </div>
 
     <script>
         let selectedVideos = [];
-        let videoTimes = {}; // Object to hold the individual times for each video
+        let videoTimes = {};
 
         function loadVideos() {
+            const loadingMessage = document.getElementById('loading-message');
+            loadingMessage.style.display = 'block'; 
+            loadingMessage.textContent = "Videos are loading...";
+
             fetch('/load_videos')
                 .then(response => response.json())
                 .then(data => {
+                    loadingMessage.style.display = 'none'; 
+
                     const videoList = document.getElementById('video-list');
-                    videoList.innerHTML = '';  // Clear the list
+                    videoList.innerHTML = '';  
                     if (data.status === "error") {
                         alert(data.message);
                     } else {
@@ -72,66 +79,46 @@
                         });
                     }
                 })
-                .catch(error => console.error('Error loading videos:', error));
+                .catch(error => {
+                    loadingMessage.style.display = 'none'; 
+                    console.error('Error loading videos:', error);
+                    alert("Fehler beim Laden der Videos!");
+                });
         }
 
         function updateSelection(url, index) {
             const checkbox = document.querySelector(`input[type="checkbox"][value="${url}"]`);
-            const isChecked = checkbox.checked;
-            if (isChecked) {
+            if (checkbox.checked) {
                 selectedVideos.push(url);
             } else {
                 selectedVideos = selectedVideos.filter(video => video !== url);
             }
         }
 
-        function updateTime(url, index) {
-            const timeInput = document.getElementById(`time-${index}`);
-            const timeValue = timeInput.value;
-            videoTimes[url] = timeValue;
-        }
-
         function applyGlobalTime() {
             const globalTime = document.getElementById('global-time').value;
             selectedVideos.forEach((url, index) => {
-                const timeInput = document.getElementById(`time-${index}`);
-                timeInput.value = globalTime;
+                document.getElementById(`time-${index}`).value = globalTime;
                 videoTimes[url] = globalTime;
             });
         }
 
         function playVideos() {
-            const videosToPlay = selectedVideos.map(url => {
-                return {
-                    url: url,
-                    time: videoTimes[url] || 30 // Default to 30 if no specific time is set
-                };
-            });
-
+            const videosToPlay = selectedVideos.map(url => ({ url: url, time: videoTimes[url] || 30 }));
             fetch('/set_videos', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ videos: videosToPlay })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === "success") {
-                    fetch('/play', { method: 'POST' })
-                        .then(response => response.json())
-                        .then(data => console.log('Playback started:', data))
-                        .catch(error => console.error('Error playing videos:', error));
-                }
-            })
-            .catch(error => console.error('Error setting videos:', error));
+            }).then(() => fetch('/play', { method: 'POST' }));
         }
 
         function stopPlayback() {
-            fetch('/stop', { method: 'POST' })
-                .then(response => response.json())
-                .then(data => console.log('Playback stopped:', data))
-                .catch(error => console.error('Error stopping playback:', error));
+            fetch('/stop', { method: 'POST' });
+        }
+
+        function selectAll() {
+            document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => checkbox.checked = true);
+            selectedVideos = Array.from(document.querySelectorAll('input[type="checkbox"]')).map(cb => cb.value);
         }
     </script>
 </body>

@@ -58,7 +58,7 @@ def load_videos():
     if not links:
         return jsonify({"status": "error", "message": "No valid URLs found."})
     
-    video_data = [{"url": link, "title": get_video_title(link), "time": 30} for link in links]
+    video_data = [{"url": link, "title": get_video_title(link), "time": 120} for link in links]
     print("Video-Daten:", video_data)  # Debugging-Ausgabe
     return jsonify(video_data)
 
