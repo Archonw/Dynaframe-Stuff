@@ -5,10 +5,13 @@ import time
 import subprocess
 import urllib.parse
 import os
+import re
 
 app = Flask(__name__)
 VIDEO_URLS_FILE = "video-urls.txt"  # Pfad zur Datei mit den URLs
 selected_videos = []
+is_playing = False  # Variable, die angibt, ob die Wiedergabe läuft
+playback_thread = None  # Verweis auf den Wiedergabe-Thread
 
 # Funktion zum Laden der URLs
 def load_urls():
@@ -36,15 +39,26 @@ def save_urls(urls):
 # Funktion zum Abrufen des Titels eines Videos
 def get_video_title(url):
     try:
-        ydl_opts = {
-            "quiet": True,
-            "skip_download": True,
-            "noplaylist": True,
-            "force_generic_extractor": True
-        }
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-            return info.get('title', 'Unknown')
+        # Wenn es sich um eine RTSP-URL handelt
+        if url.startswith("rtsp://"):
+            # Extrahiere die IP-Adresse oder den Hostnamen aus der URL
+            match = re.match(r"rtsp://([^/]+)", url)
+            if match:
+                ip_address = match.group(1)
+                return f"RTSP - {ip_address}"  # Nur die IP-Adresse nach "RTSP -"
+            else:
+                return "RTSP - Unknown IP"  # Falls keine IP gefunden wurde
+        else:
+            # Standard Titel mit yt-dlp für andere URLs
+            ydl_opts = {
+                "quiet": True,
+                "skip_download": True,
+                "noplaylist": True,
+                "force_generic_extractor": True
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                return info.get('title', 'Unknown')
     except Exception:
         return "Error retrieving title"
 
@@ -70,12 +84,21 @@ def set_videos():
 
 @app.route('/play', methods=['POST'])
 def play_videos():
+    global is_playing, playback_thread
+    if is_playing:
+        return jsonify({"status": "already playing"})
+    
     def play_thread():
+        global is_playing
+        is_playing = True
         while True:
             if not selected_videos:
                 break
             
             for video in selected_videos:
+                if not is_playing:  # Wenn die Wiedergabe gestoppt wurde, beenden wir die Schleife
+                    break
+
                 encoded_url = urllib.parse.quote(video['url'], safe='')
                 cmd = [
                     "curl", "-X", "GET",
@@ -84,14 +107,22 @@ def play_videos():
                 ]
                 subprocess.run(cmd)
                 time.sleep(int(video['time']))
-    
-    threading.Thread(target=play_thread, daemon=True).start()
+
+        is_playing = False  # Setze is_playing auf False, wenn die Wiedergabe beendet ist
+
+    playback_thread = threading.Thread(target=play_thread, daemon=True)
+    playback_thread.start()
     return jsonify({"status": "playing"})
 
 @app.route('/stop', methods=['POST'])
 def stop_playback():
+    global is_playing
+    is_playing = False  # Stoppe die Wiedergabe
+
+    # Optional: Stelle sicher, dass keine weiteren Videos mehr abgespielt werden
     subprocess.run(["curl", "-X", "GET", "http://localhost:5000/api/PlaylistAPI/GoNext", "-H", "accept: */*"])
-    subprocess.run(["curl", "-X", "POST", "http://localhost:5000/api/AppSettingAPI/SetAppSetting?name=AutomaticMode&value=true", "-H", "accept: */*", "-d", ""])  
+    subprocess.run(["curl", "-X", "POST", "http://localhost:5000/api/AppSettingAPI/SetAppSetting?name=AutomaticMode&value=true", "-H", "accept: */*", "-d", ""])
+
     return jsonify({"status": "stopped"})
 
 @app.route('/edit-urls', methods=['GET', 'POST'])
