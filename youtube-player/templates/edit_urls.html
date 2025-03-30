@@ -7,13 +7,58 @@
     <style>
         body {
             font-family: Arial, sans-serif;
+            background-color: #1e1e2e;
+            color: #ffffff;
+            text-align: center;
+            padding: 20px;
+        }
+        h1 {
+            color: #ff9800;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: #282a36;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+        button {
+            background-color: #ff9800;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: 0.3s;
+        }
+        button:hover {
+            background-color: #e68900;
         }
         .video-list {
             list-style: none;
             padding: 0;
+            text-align: left;
         }
         .video-item {
+            background: #44475a;
             margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        input[type="text"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-top: 10px;
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 5px;
         }
         .controls {
             margin-top: 20px;
@@ -22,7 +67,7 @@
 </head>
 <body>
     <h1>Edit YouTube URLs</h1>
-    <div class="video-selection">
+    <div class="container">
         <h2>Delete Selected URLs</h2>
         <ul class="video-list" id="video-list">
             {% for url in urls %}
@@ -33,33 +78,26 @@
         </ul>
         <button onclick="deleteSelected()">Delete Selected URLs</button>
     </div>
-
-    <div class="add-url">
+    <div class="container" style="margin-top: 20px;">
         <h2>Add New URL</h2>
         <input type="text" id="new-url" placeholder="Enter new YouTube URL">
         <button onclick="addUrl()">Add New URL</button>
     </div>
-
-    <!-- Button to go back to YouTube Player -->
     <div class="controls">
-        <a href="/"><button>Back to YouTube Player</button></a>
+        <button onclick="window.location.href='/'">Back to YouTube Player</button>
     </div>
-
     <script>
         let selectedVideos = [];
 
-        // Update the selected video list
         function updateSelection(url) {
             const checkbox = document.querySelector(`input[type="checkbox"][value="${url}"]`);
-            const isChecked = checkbox.checked;
-            if (isChecked) {
+            if (checkbox.checked) {
                 selectedVideos.push(url);
             } else {
                 selectedVideos = selectedVideos.filter(video => video !== url);
             }
         }
 
-        // Add a new URL
         function addUrl() {
             const newUrl = document.getElementById('new-url').value;
             if (!newUrl.trim()) {
@@ -69,21 +107,14 @@
 
             fetch('/edit-urls', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 'new-url': newUrl })
             })
             .then(response => response.json())
-            .then(data => {
-                if (data.status === "success") {
-                    location.reload(); // Reload the page to show new URL
-                }
-            })
+            .then(data => { if (data.status === "success") location.reload(); })
             .catch(error => console.error('Error adding URL:', error));
         }
 
-        // Delete selected URLs
         function deleteSelected() {
             if (selectedVideos.length === 0) {
                 alert("No URLs selected for deletion.");
@@ -92,17 +123,11 @@
 
             fetch('/edit-urls', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 'delete': selectedVideos })
             })
             .then(response => response.json())
-            .then(data => {
-                if (data.status === "success") {
-                    location.reload(); // Reload the page to update the list
-                }
-            })
+            .then(data => { if (data.status === "success") location.reload(); })
             .catch(error => console.error('Error deleting URLs:', error));
         }
     </script>

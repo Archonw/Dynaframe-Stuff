@@ -7,63 +7,103 @@
     <style>
         body {
             font-family: Arial, sans-serif;
+            background-color: #1e1e2e;
+            color: #ffffff;
+            text-align: center;
+            padding: 20px;
+        }
+        h1 {
+            color: #ff9800;
+        }
+        .container, .edit-container {
+            max-width: 600px;
+            margin: auto;
+            background: #282a36;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+        .edit-container {
+            margin-top: 20px; /* Fügt eine Lücke zwischen den Kästen hinzu */
+        }
+        button {
+            background-color: #ff9800;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: 0.3s;
+        }
+        button:hover {
+            background-color: #e68900;
         }
         .video-list {
             list-style: none;
             padding: 0;
+            text-align: left;
         }
         .video-item {
+            background: #44475a;
             margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
-        .controls {
-            margin-top: 20px;
+        input[type="checkbox"] {
+            transform: scale(1.3);
+            margin-right: 10px;
         }
-        .video-item input[type="number"] {
+        input[type="number"] {
             width: 60px;
-            margin-left: 5px;
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 3px;
+            padding: 5px;
+        }
+        #loading-message {
+            display: none;
+            color: #ff9800;
+            font-weight: bold;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
     <h1>YouTube Player</h1>
-    <div class="video-selection">
+    <div class="container">
         <button onclick="loadVideos()">Load Videos</button>
-        <button onclick="selectAll()">Select All</button>  
-        <p id="loading-message" style="display: none; color: blue;">Videos werden geladen...</p>
+        <button onclick="selectAll()">Select All</button>
+        <p id="loading-message">Videos are loading...</p>
         <ul class="video-list" id="video-list"></ul>
-    </div>
-
-    <div class="global-time">
-        <label for="global-time">Global Time (Sec):</label>
-        <input type="number" id="global-time" value="30">
-        <button onclick="applyGlobalTime()">Apply Global Time</button>
-    </div>
-    
-    <div class="controls">
+        <div>
+            <label for="global-time">Global Time (Sec):</label>
+            <input type="number" id="global-time" value="120">
+            <button onclick="applyGlobalTime()">Apply Global Time</button>
+        </div>
         <button onclick="playVideos()">Play Selected Videos</button>
         <button onclick="stopPlayback()">Stop</button>
     </div>
-
-    <div class="controls">
+    <div class="edit-container">
         <button onclick="window.location.href='/edit-urls'">Edit URLs</button>
     </div>
-
     <script>
         let selectedVideos = [];
         let videoTimes = {};
 
         function loadVideos() {
-            const loadingMessage = document.getElementById('loading-message');
-            loadingMessage.style.display = 'block'; 
-            loadingMessage.textContent = "Videos are loading...";
-
+            document.getElementById('loading-message').style.display = 'block';
             fetch('/load_videos')
                 .then(response => response.json())
                 .then(data => {
-                    loadingMessage.style.display = 'none'; 
-
+                    document.getElementById('loading-message').style.display = 'none';
                     const videoList = document.getElementById('video-list');
-                    videoList.innerHTML = '';  
+                    videoList.innerHTML = '';
                     if (data.status === "error") {
                         alert(data.message);
                     } else {
@@ -71,54 +111,24 @@
                             const li = document.createElement('li');
                             li.className = 'video-item';
                             li.innerHTML = `
-                                <input type="checkbox" value="${video.url}" onchange="updateSelection('${video.url}', ${index})" /> 
+                                <input type="checkbox" value="${video.url}" onchange="updateSelection('${video.url}', ${index})"> 
                                 ${video.title} - 
-                                <input type="number" id="time-${index}" value="${video.time}" oninput="updateTime('${video.url}', ${index})" /> Sec
+                                <input type="number" id="time-${index}" value="120" oninput="updateTime('${video.url}', ${index})"> Sec
                             `;
                             videoList.appendChild(li);
                         });
                     }
                 })
                 .catch(error => {
-                    loadingMessage.style.display = 'none'; 
+                    document.getElementById('loading-message').style.display = 'none';
                     console.error('Error loading videos:', error);
-                    alert("Fehler beim Laden der Videos!");
                 });
         }
 
-        function updateSelection(url, index) {
-            const checkbox = document.querySelector(`input[type="checkbox"][value="${url}"]`);
-            if (checkbox.checked) {
-                selectedVideos.push(url);
-            } else {
-                selectedVideos = selectedVideos.filter(video => video !== url);
-            }
-        }
-
-        function applyGlobalTime() {
-            const globalTime = document.getElementById('global-time').value;
-            selectedVideos.forEach((url, index) => {
-                document.getElementById(`time-${index}`).value = globalTime;
-                videoTimes[url] = globalTime;
-            });
-        }
-
-        function playVideos() {
-            const videosToPlay = selectedVideos.map(url => ({ url: url, time: videoTimes[url] || 30 }));
-            fetch('/set_videos', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ videos: videosToPlay })
-            }).then(() => fetch('/play', { method: 'POST' }));
-        }
-
-        function stopPlayback() {
-            fetch('/stop', { method: 'POST' });
-        }
-
         function selectAll() {
-            document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => checkbox.checked = true);
-            selectedVideos = Array.from(document.querySelectorAll('input[type="checkbox"]')).map(cb => cb.value);
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => checkbox.checked = true);
+            selectedVideos = Array.from(checkboxes).map(checkbox => checkbox.value);
         }
     </script>
 </body>
