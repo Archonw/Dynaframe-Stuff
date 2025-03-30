@@ -78,7 +78,7 @@
     <h1>YouTube Player</h1>
     <div class="container">
         <button onclick="loadVideos()">Load Videos</button>
-        <button onclick="selectAll()">Select All</button>
+        <button id="select-all-btn" onclick="toggleSelectAll()">Select All</button>
         <p id="loading-message">Videos are loading...</p>
         <ul class="video-list" id="video-list"></ul>
         <div>
@@ -133,14 +133,26 @@
             } else {
                 selectedVideos = selectedVideos.filter(video => video.url !== url);
             }
+            updateSelectAllButton();
         }
 
-        function selectAll() {
+        function toggleSelectAll() {
             const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            const allSelected = Array.from(checkboxes).every(checkbox => checkbox.checked);
+            
             checkboxes.forEach(checkbox => {
-                checkbox.checked = true;
+                checkbox.checked = !allSelected;
                 updateSelection(checkbox.value, Array.from(checkboxes).indexOf(checkbox));
             });
+
+            updateSelectAllButton();
+        }
+
+        function updateSelectAllButton() {
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            const allSelected = Array.from(checkboxes).every(checkbox => checkbox.checked);
+            const selectAllBtn = document.getElementById('select-all-btn');
+            selectAllBtn.textContent = allSelected ? "Unselect All" : "Select All";
         }
 
         function setTimeForSelected() {
