@@ -7,7 +7,7 @@ import urllib.parse
 import os
 
 app = Flask(__name__)
-VIDEO_URLS_FILE = "/home/pi/youtube/video-urls.txt"  # Pfad zur Datei mit den URLs
+VIDEO_URLS_FILE = "video-urls.txt"  # Pfad zur Datei mit den URLs
 selected_videos = []
 
 # Funktion zum Laden der URLs
