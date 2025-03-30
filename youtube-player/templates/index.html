@@ -24,7 +24,7 @@
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
         }
         .edit-container {
-            margin-top: 20px; /* Fügt eine Lücke zwischen den Kästen hinzu */
+            margin-top: 20px;
         }
         button {
             background-color: #ff9800;
@@ -82,9 +82,9 @@
         <p id="loading-message">Videos are loading...</p>
         <ul class="video-list" id="video-list"></ul>
         <div>
-            <label for="global-time">Global Time (Sec):</label>
+            <label for="global-time">Set Time for Selected Videos (Sec):</label>
             <input type="number" id="global-time" value="120">
-            <button onclick="applyGlobalTime()">Apply Global Time</button>
+            <button onclick="setTimeForSelected()">Set Time</button>
         </div>
         <button onclick="playVideos()">Play Selected Videos</button>
         <button onclick="stopPlayback()">Stop</button>
@@ -94,7 +94,6 @@
     </div>
     <script>
         let selectedVideos = [];
-        let videoTimes = {};
 
         function loadVideos() {
             document.getElementById('loading-message').style.display = 'block';
@@ -105,7 +104,7 @@
                     const videoList = document.getElementById('video-list');
                     videoList.innerHTML = '';
                     if (data.status === "error") {
-                        alert(data.message);
+                        console.error(data.message);
                     } else {
                         data.forEach((video, index) => {
                             const li = document.createElement('li');
@@ -113,7 +112,7 @@
                             li.innerHTML = `
                                 <input type="checkbox" value="${video.url}" onchange="updateSelection('${video.url}', ${index})"> 
                                 ${video.title} - 
-                                <input type="number" id="time-${index}" value="120" oninput="updateTime('${video.url}', ${index})"> Sec
+                                <input type="number" id="time-${index}" value="120"> Sec
                             `;
                             videoList.appendChild(li);
                         });
@@ -128,7 +127,38 @@
         function selectAll() {
             const checkboxes = document.querySelectorAll('input[type="checkbox"]');
             checkboxes.forEach(checkbox => checkbox.checked = true);
-            selectedVideos = Array.from(checkboxes).map(checkbox => checkbox.value);
+        }
+
+        function setTimeForSelected() {
+            const globalTime = document.getElementById('global-time').value;
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach((checkbox, index) => {
+                if (checkbox.checked) {
+                    const timeInput = document.getElementById(`time-${index}`);
+                    if (timeInput) {
+                        timeInput.value = globalTime;
+                    }
+                }
+            });
+        }
+
+        function playVideos() {
+            fetch('/set_videos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ videos: selectedVideos })
+            })
+            .then(response => response.json())
+            .then(data => {
+                fetch('/play', { method: 'POST' })
+                    .catch(error => console.error('Error playing videos:', error));
+            })
+            .catch(error => console.error('Error setting videos:', error));
+        }
+
+        function stopPlayback() {
+            fetch('/stop', { method: 'POST' })
+                .catch(error => console.error('Error stopping playback:', error));
         }
     </script>
 </body>

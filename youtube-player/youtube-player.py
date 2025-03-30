@@ -94,11 +94,9 @@ def stop_playback():
     subprocess.run(["curl", "-X", "POST", "http://localhost:5000/api/AppSettingAPI/SetAppSetting?name=AutomaticMode&value=true", "-H", "accept: */*", "-d", ""])  
     return jsonify({"status": "stopped"})
 
-# Neue Route zum Bearbeiten der URLs
 @app.route('/edit-urls', methods=['GET', 'POST'])
 def edit_urls():
     if request.method == 'POST':
-        # Verarbeite die POST-Daten wie gehabt
         data = request.get_json()  # Hole die JSON-Daten der Anfrage
         if 'delete' in data:
             urls_to_delete = data['delete']  # Liste der zu löschenden URLs
@@ -106,7 +104,6 @@ def edit_urls():
             urls = [url for url in urls if url not in urls_to_delete]  # Entferne die URLs
             save_urls(urls)  # Speichere die aktualisierte URL-Liste
 
-        # Neue URL hinzufügen (falls vorhanden)
         if 'new-url' in data:
             new_url = data['new-url']
             urls = load_urls()
@@ -118,7 +115,7 @@ def edit_urls():
 
     # Nach der Bearbeitung die URLs neu laden
     urls = load_urls()
-    return render_template('edit_urls.html', urls=urls)  # URLs ans Template übergeben
+    return render_template('edit_urls.html', urls=urls)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
