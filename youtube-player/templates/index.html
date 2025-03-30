@@ -137,7 +137,10 @@
 
         function selectAll() {
             const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-            checkboxes.forEach(checkbox => checkbox.checked = true);
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = true;
+                updateSelection(checkbox.value, Array.from(checkboxes).indexOf(checkbox));
+            });
         }
 
         function setTimeForSelected() {

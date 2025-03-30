@@ -27,15 +27,6 @@ def load_urls():
         print(f"Fehler beim Laden der URLs: {e}")  # Fehlerprotokollierung
         return []
 
-# Funktion zum Speichern der URLs
-def save_urls(urls):
-    try:
-        with open(VIDEO_URLS_FILE, 'w') as file:
-            for url in urls:
-                file.write(url + '\n')
-    except Exception as e:
-        print(f"Fehler beim Speichern der URLs: {e}")  # Fehlerprotokollierung
-
 # Funktion zum Abrufen des Titels eines Videos
 def get_video_title(url):
     try:
@@ -80,6 +71,7 @@ def load_videos():
 def set_videos():
     global selected_videos
     selected_videos = request.json.get("videos", [])
+    print(f"Selected Videos: {selected_videos}")  # Debugging-Ausgabe
     return jsonify({"status": "success"})
 
 @app.route('/play', methods=['POST'])
@@ -139,14 +131,22 @@ def edit_urls():
             new_url = data['new-url']
             urls = load_urls()
             if new_url and new_url not in urls:
-                urls.append(new_url)
-                save_urls(urls)
+                urls.append(new_url)  # Füge die neue URL hinzu
+                save_urls(urls)  # Speichere die aktualisierte URL-Liste
 
         return jsonify({"status": "success"})
 
-    # Nach der Bearbeitung die URLs neu laden
+    # GET-Methode: Lade URLs und übergebe sie an das Template
     urls = load_urls()
     return render_template('edit_urls.html', urls=urls)
+
+def save_urls(urls):
+    try:
+        with open(VIDEO_URLS_FILE, 'w') as file:
+            for url in urls:
+                file.write(url + "\n")
+    except Exception as e:
+        print(f"Fehler beim Speichern der URLs: {e}")  # Fehlerprotokollierung
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
