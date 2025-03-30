@@ -124,6 +124,17 @@
                 });
         }
 
+        function updateSelection(url, index) {
+            const checkbox = document.querySelector(`input[type="checkbox"][value="${url}"]`);
+            const timeInput = document.getElementById(`time-${index}`);
+            
+            if (checkbox.checked) {
+                selectedVideos.push({ url: url, time: timeInput.value });
+            } else {
+                selectedVideos = selectedVideos.filter(video => video.url !== url);
+            }
+        }
+
         function selectAll() {
             const checkboxes = document.querySelectorAll('input[type="checkbox"]');
             checkboxes.forEach(checkbox => checkbox.checked = true);
@@ -137,6 +148,10 @@
                     const timeInput = document.getElementById(`time-${index}`);
                     if (timeInput) {
                         timeInput.value = globalTime;
+                        const video = selectedVideos.find(v => v.url === checkbox.value);
+                        if (video) {
+                            video.time = globalTime;
+                        }
                     }
                 }
             });
