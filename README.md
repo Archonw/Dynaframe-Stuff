@@ -15,6 +15,9 @@ Automatic installation script for:
 
 		wget -O - https://raw.githubusercontent.com/Archonw/Dynaframe-Stuff/main/scripts/install_dynaframe_monitor.sh | sudo bash
 	 
+2. Install script for the youtube-player
+	
+	Run this script from your computer. You will be asked for the IP address and the user.
 
 
 Links to documentations:
