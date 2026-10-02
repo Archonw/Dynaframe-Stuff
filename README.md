@@ -8,7 +8,13 @@ Hello,
 here you can find some stuff for your Dynaframe.
 
 
-DynaframPro/Jans-store - Here you find my store for DynaframePro - https://raw.githubusercontent.com/Archonw/Dynaframe-Stuff/main/DynaframPro/Jans-store/catalog.json
+DynaframPro/Jans-store -- Here you find my store for DynaframePro - https://raw.githubusercontent.com/Archonw/Dynaframe-Stuff/main/DynaframPro/Jans-store/catalog.json
+
+dfplugins -- plugins for the older Dynaframe version
+
+scripts -- scripts for the older Dynaframe version
+
+youtube player -- youtube player for the older Dynaframe version
 
 
 Links to documentations:
