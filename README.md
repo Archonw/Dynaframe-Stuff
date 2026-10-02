@@ -4,20 +4,11 @@
 
 
 Hello,
+
 here you can find some stuff for your Dynaframe.
 
 
-Automatic installation script for:
-
-1. Dynaframe Monitoring: 
-
-	Check if Dynaframe is still running. If not, a reboot is carried out and an entry is made in the log under /home/pi/Dynaframe/dynaframe_monitor.log
-
-		wget -O - https://raw.githubusercontent.com/Archonw/Dynaframe-Stuff/main/scripts/install_dynaframe_monitor.sh | sudo bash
-	 
-2. Install script for the youtube-player
-	
-	Run this script from your computer. You will be asked for the IP address and the user.
+DynaframPro/Jans-store - Here you find my store for DynaframePro - https://raw.githubusercontent.com/Archonw/Dynaframe-Stuff/main/DynaframPro/Jans-store/catalog.json
 
 
 Links to documentations:
