@@ -4,7 +4,7 @@
   "store": {
     "name": "Jan's Store",
     "author": "Jan",
-    "description": "Dynaframe Plugins von Jan",
+    "description": "Dynaframe Plugins made by Jan",
     "website": "https://github.com/Archonw/Dynaframe-Stuff"
   },
   "packs": [
@@ -13,7 +13,7 @@
       "type": "plugin",
       "title": "Playlist Button",
       "author": "Jan",
-      "description": "GPIO-Taster zur Playlist-Auswahl per Overlay-Menü",
+      "description": "GPIO button to select playlists via an overlay menu",
       "version": "1.5.0",
       "updated": "2026-10-02T00:00:00Z",
       "thumbnails": ["plugin_packs/playlist-button/thumb.webp"],

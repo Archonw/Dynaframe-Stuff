@@ -12,7 +12,7 @@
     {
       "Name": "GpioPin",
       "Type": "number",
-      "Description": "BCM-Pin-number of the button (tandard: GPIO21)",
+      "Description": "BCM-Pin-number of the button (standard: GPIO21)",
       "DefaultValue": 21,
       "Value": 21
     },
@@ -86,7 +86,7 @@
       "type": "overlay-text",
       "id": "PlaylistButtonPlugin.MenuText",
       "friendlyName": "Playlist selection menu",
-      "description": "AAlphabetical list of all playlists, including the current selection and the active playlist",
+      "description": "Alphabetical list of all playlists, including the current selection and the active playlist",
       "events": null,
       "eventParameters": null
     },
