@@ -567,12 +567,59 @@ def on_released():
         plugin.log(f"Fehler bei Kurzdruck-Verarbeitung: {exc}", level="error")
 
 
+def _find_gpio_pin_factory():
+    """Sucht den GPIO-Chip des Pin-Headers und gibt eine passende lgpio-Factory zurueck.
+
+    Die Chip-Nummer ist nicht fest: Aeltere Kernel verwenden gpiochip4 (Pi 5), neuere
+    gpiochip0, und manche Systeme nummerieren die Chips anders (z.B. gpiochip15).
+    gpiozero probiert aber nur 4 und 0. Deshalb wird der Chip ueber sein Label
+    ("pinctrl-rp1", "pinctrl-bcm2711", "pinctrl-bcm2835") gefunden.
+    Gibt None zurueck, wenn nichts gefunden wird; dann gilt das gpiozero-Standardverhalten.
+    """
+    try:
+        import glob
+        import lgpio
+        from gpiozero.pins.lgpio import LGPIOFactory
+    except Exception:
+        return None
+
+    chips = []
+    for path in glob.glob("/dev/gpiochip*"):
+        suffix = path[len("/dev/gpiochip"):]
+        if suffix.isdigit():
+            chips.append(int(suffix))
+
+    for chip in sorted(chips):
+        try:
+            handle = lgpio.gpiochip_open(chip)
+        except Exception:
+            continue
+        try:
+            info = lgpio.gpio_get_chip_info(handle)
+        except Exception:
+            info = None
+        finally:
+            try:
+                lgpio.gpiochip_close(handle)
+            except Exception:
+                pass
+        if isinstance(info, (list, tuple)) and len(info) >= 4 and str(info[3]).startswith("pinctrl-"):
+            try:
+                factory = LGPIOFactory(chip=chip)
+            except Exception:
+                continue
+            plugin.log(f"GPIO-Chip gefunden: gpiochip{chip} ({info[3]}).")
+            return factory
+    return None
+
+
 button = Button(
     settings["gpio_pin"],
     pull_up=True,
     bounce_time=0.05,
     hold_time=settings["long_press_seconds"],
     hold_repeat=False,
+    pin_factory=_find_gpio_pin_factory(),
 )
 button.when_held = on_held
 button.when_released = on_released

@@ -2,7 +2,7 @@
   "Name": "PlaylistButtonPlugin",
   "Author": "Jan",
   "Description": "GPIO button control for playlists: short print opens an overlay menu with all playlists (alphabetical, current ones marked) and scrolls through the list when pressed again briefly. After 10 seconds of inactivity, the overlay closes again without changing the active playlist. A long key press takes over the playlist marked in the menu as a new active playlist.",
-  "Version": "1.5",
+  "Version": "1.6.0",
   "DisplayName": "Playlist Button",
   "ManifestVersion": 1,
   "IconPath": null,

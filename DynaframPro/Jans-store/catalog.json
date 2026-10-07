@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "generated": "2026-10-02T00:00:00Z",
+  "generated": "2026-10-07T20:19:57Z",
   "store": {
     "name": "Jan's Store",
     "author": "Jan",
@@ -14,12 +14,14 @@
       "title": "Playlist Button",
       "author": "Jan",
       "description": "GPIO button to select playlists via an overlay menu",
-      "version": "1.5.0",
-      "updated": "2026-10-02T00:00:00Z",
-      "thumbnails": ["plugin_packs/playlist-button/thumb.webp"],
+      "version": "1.6.0",
+      "updated": "2026-10-07T20:19:57Z",
+      "thumbnails": [
+        "plugin_packs/playlist-button/thumb.webp"
+      ],
       "download_url": "plugin_packs/playlist-button/playlist-button.zip",
-      "size": 8194,
-      "checksum": "fc9fae3e918f511cbcb7964fc5669009739fa9dba58aa48d40809c7139fab77f"
+      "size": 20340,
+      "checksum": "c754ba372a8e565c7dc8014d1fe960f553843b7de9d64c0ea5d4f61aed6d8966"
     }
   ]
 }
