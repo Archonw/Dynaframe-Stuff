@@ -30,7 +30,7 @@
       "author": "Jan",
       "description": "GPIO button that opens a web page full screen on top of the slideshow and closes it again with the next press",
       "version": "0.2.0",
-      "updated": "<Zeitstempel>",
+      "updated": "2026-10-09T23:15:57Z",
       "thumbnails": [
         "plugin_packs/Webpages/thumb.webp"
       ],
