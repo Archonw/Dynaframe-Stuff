@@ -2,7 +2,7 @@
   "Name": "WebPageButtonPlugin",
   "Author": "Jan",
   "Description": "GPIO button control for web pages: a short press opens the first configured page full screen on top of the slideshow, each further short press switches to the next page, a long press closes the browser.",
-  "Version": "0.2",
+  "Version": "0.2.0",
   "DisplayName": "Web Page Button",
   "ManifestVersion": 1,
   "IconPath": null,
