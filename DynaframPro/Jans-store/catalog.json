@@ -32,9 +32,9 @@
       "version": "0.1.0",
       "updated": "<Zeitstempel>",
       "thumbnails": [
-        "plugin_packs/webpage-button/thumb.webp"
+        "plugin_packs/Webpages/thumb.webp"
       ],
-      "download_url": "plugin_packs/webpage-button/webpage-button.zip",
+      "download_url": "plugin_packs/Webpages/webpages.zip",
       "size": "4887",
       "checksum": "6e48141503a2cd7d590866e2ffd56c42b4148cd82921cf69143f497d19ade9e7"
     }
