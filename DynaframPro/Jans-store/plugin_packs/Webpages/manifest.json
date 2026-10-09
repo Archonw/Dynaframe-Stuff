@@ -1,0 +1,83 @@
+{
+  "Name": "WebPageButtonPlugin",
+  "Author": "Jan",
+  "Description": "GPIO button control for a web page: the first press opens the configured web page full screen on top of the slideshow, the next press closes it again.",
+  "Version": "0.1",
+  "DisplayName": "Web Page Button",
+  "ManifestVersion": 1,
+  "IconPath": null,
+  "Enabled": false,
+  "ApiVersion": 2,
+  "Settings": [
+    {
+      "Name": "GpioPin",
+      "Type": "number",
+      "Description": "BCM pin number of the button (default: GPIO20). Restart the plugin after changing it.",
+      "DefaultValue": 20,
+      "Value": 20
+    },
+    {
+      "Name": "Url",
+      "Type": "string",
+      "Description": "Address of the web page that is opened full screen (for example https://example.com or http://192.168.1.10:8123).",
+      "DefaultValue": "https://example.com",
+      "Value": "https://example.com"
+    },
+    {
+      "Name": "DisplayServer",
+      "Type": "string",
+      "Description": "Display server used by the browser window: wayland (default), x11 or auto.",
+      "DefaultValue": "wayland",
+      "Value": "wayland"
+    },
+    {
+      "Name": "BrowserCommand",
+      "Type": "string",
+      "Description": "Optional browser executable. Empty = detect chromium, chromium-browser, google-chrome or firefox automatically.",
+      "DefaultValue": "",
+      "Value": ""
+    },
+    {
+      "Name": "ExtraBrowserArgs",
+      "Type": "string",
+      "Description": "Optional additional command line arguments for the browser.",
+      "DefaultValue": "",
+      "Value": ""
+    }
+  ],
+  "OverlayPlugins": [],
+  "Services": [
+    {
+      "type": "background",
+      "id": "WebPageButtonPlugin.Background",
+      "friendlyName": "Web Page Button Runtime",
+      "description": "Monitors the GPIO button and opens or closes the web page window.",
+      "events": null,
+      "eventParameters": null
+    }
+  ],
+  "OverlayDesigns": null,
+  "AdvancedSettings": null,
+  "Actions": [],
+  "Compatibility": {
+    "MinHostVersion": null,
+    "MaxHostVersionExclusive": null,
+    "MinPluginPlatformRevision": 6,
+    "MaxPluginPlatformRevisionExclusive": null,
+    "Architectures": [
+      "arm64",
+      "x64"
+    ],
+    "RequiredFeatures": [
+      "permission-declarations-v1"
+    ]
+  },
+  "Permissions": [
+    {
+      "id": "background-execution",
+      "reason": "Permanently monitors the GPIO button in the background.",
+      "scope": null
+    }
+  ],
+  "Links": null
+}
