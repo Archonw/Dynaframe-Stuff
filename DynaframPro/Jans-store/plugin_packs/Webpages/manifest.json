@@ -1,8 +1,8 @@
 {
   "Name": "WebPageButtonPlugin",
   "Author": "Jan",
-  "Description": "GPIO button control for a web page: the first press opens the configured web page full screen on top of the slideshow, the next press closes it again.",
-  "Version": "0.1",
+  "Description": "GPIO button control for web pages: a short press opens the first configured page full screen on top of the slideshow, each further short press switches to the next page, a long press closes the browser.",
+  "Version": "0.2",
   "DisplayName": "Web Page Button",
   "ManifestVersion": 1,
   "IconPath": null,
@@ -17,11 +17,25 @@
       "Value": 20
     },
     {
-      "Name": "Url",
+      "Name": "Urls",
       "Type": "string",
-      "Description": "Address of the web page that is opened full screen (for example https://example.com or http://192.168.1.10:8123).",
+      "Description": "Address(es) of the web pages. Separate several pages with a space or a semicolon, e.g. http://192.168.1.10:8123 https://example.com. The first short press shows the first page, each further press the next one.",
       "DefaultValue": "https://example.com",
       "Value": "https://example.com"
+    },
+    {
+      "Name": "LongPressSeconds",
+      "Type": "number",
+      "Description": "Hold time in seconds from which a press counts as long and closes the browser. Restart the plugin after changing it.",
+      "DefaultValue": 2,
+      "Value": 2
+    },
+    {
+      "Name": "CloseAfterLastPage",
+      "Type": "boolean",
+      "Description": "When active, the short press after the last page closes the browser. When off, it starts again with the first page.",
+      "DefaultValue": false,
+      "Value": false
     },
     {
       "Name": "DisplayServer",
@@ -51,7 +65,7 @@
       "type": "background",
       "id": "WebPageButtonPlugin.Background",
       "friendlyName": "Web Page Button Runtime",
-      "description": "Monitors the GPIO button and opens or closes the web page window.",
+      "description": "Monitors the GPIO button and shows, switches or closes the web page window.",
       "events": null,
       "eventParameters": null
     }

@@ -2,13 +2,17 @@
 """
 WebPageButtonPlugin for Dynaframe Pro.
 
-A GPIO button toggles a web page on top of the slideshow:
-- 1st press: opens the configured URL in a full-screen (kiosk) browser window.
-- Next press: closes the browser window again, the slideshow is visible again.
+A GPIO button shows web pages on top of the slideshow:
+- Short press, browser closed: opens the first configured page full screen (kiosk window).
+- Short press, browser open: switches to the next page. After the last page it starts again
+  with the first one, or closes the browser if CloseAfterLastPage is enabled.
+- Long press (LongPressSeconds, default 2 s): closes the browser, the slideshow is visible again.
 
-The page is shown by a separate browser process (Chromium or Firefox), so it does not
-depend on the DynaFrame engine API. Closing the window (instead of minimizing it) works
-the same on X11 and Wayland; the page is reloaded on the next press.
+With only one configured page, a short press toggles it (open / close).
+
+The pages are shown by a separate browser process (Chromium or Firefox), so the plugin does not
+depend on the DynaFrame engine API. Closing the window (instead of minimizing it) works the same
+on X11 and Wayland; a page is reloaded every time it is shown.
 """
 
 import os
@@ -67,7 +71,9 @@ _DEBOUNCE_SECONDS = 0.4
 _lock = threading.Lock()
 _shutdown_event = threading.Event()
 _proc = None
-_last_toggle = 0.0
+_index = -1          # index of the page that is currently shown (-1 = none)
+_last_press = 0.0
+_long_pressed = False
 
 
 # --------------------------------------------------------------------------
@@ -230,15 +236,27 @@ def is_open():
     return _proc is not None and _proc.poll() is None
 
 
-def open_page():
+def get_urls():
+    raw = str(plugin.get_setting("Urls", "") or "").strip()
+    if not raw:
+        raw = str(plugin.get_setting("Url", "") or "").strip()  # setting name of version 0.1
+    urls = []
+    for part in re.split(r"[\s;]+", raw):
+        if not part:
+            continue
+        url = normalize_url(part)
+        if url:
+            urls.append(url)
+        else:
+            plugin.log(f"Ignoring invalid address: {part}", level="error")
+    return urls
+
+
+def open_page(url):
     global _proc
-    url = normalize_url(plugin.get_setting("Url", ""))
-    if not url:
-        plugin.log("The Url setting is empty or not a valid http(s) address.", level="error")
-        return
     cmd = build_command(url)
     if not cmd:
-        return
+        return False
     _kill_leftovers()
     _clear_stale_locks()
     try:
@@ -255,17 +273,19 @@ def open_page():
     except Exception as exc:
         _proc = None
         plugin.log(f"Could not start the browser: {exc}", level="error")
-        return
+        return False
     plugin.log(f"Opened {url} (pid {_proc.pid}).")
     try:
         plugin.report_activity("Web page opened", url)
     except Exception:
         pass
+    return True
 
 
-def close_page():
-    global _proc
+def close_page(quiet=False):
+    global _proc, _index
     proc, _proc = _proc, None
+    _index = -1
     if proc is None:
         return
     if proc.poll() is None:
@@ -280,27 +300,75 @@ def close_page():
                 os.killpg(proc.pid, signal.SIGKILL)
             except Exception:
                 pass
-    plugin.log("Web page closed.")
-    try:
-        plugin.report_activity("Web page closed", "")
-    except Exception:
-        pass
+    if not quiet:
+        plugin.log("Web page closed.")
+        try:
+            plugin.report_activity("Web page closed", "")
+        except Exception:
+            pass
 
 
-def toggle():
-    global _last_toggle
+def show_page(urls, index):
+    """Show urls[index]; an open browser window is closed first."""
+    global _index
+    if is_open():
+        close_page(quiet=True)
+    if open_page(urls[index]):
+        _index = index
+        plugin.log(f"Showing page {index + 1} of {len(urls)}.")
+    else:
+        _index = -1
+
+
+def on_short_press():
+    global _last_press
     now = time.monotonic()
     with _lock:
-        if now - _last_toggle < _DEBOUNCE_SECONDS:
+        if now - _last_press < _DEBOUNCE_SECONDS:
             return
-        _last_toggle = now
+        _last_press = now
+        try:
+            urls = get_urls()
+            if not urls:
+                plugin.log("The Urls setting contains no valid http(s) address.", level="error")
+                return
+            if not is_open():
+                current = -1
+            else:
+                current = _index
+            next_index = current + 1
+            if next_index >= len(urls):
+                close_after_last = str(plugin.get_setting("CloseAfterLastPage", False)).lower() == "true"
+                if current >= 0 and (close_after_last or len(urls) == 1):
+                    close_page()
+                    return
+                next_index = 0
+            show_page(urls, next_index)
+        except Exception as exc:
+            plugin.log(f"Short press failed: {exc}", level="error")
+
+
+def on_long_press():
+    with _lock:
         try:
             if is_open():
                 close_page()
-            else:
-                open_page()
         except Exception as exc:
-            plugin.log(f"Toggle failed: {exc}", level="error")
+            plugin.log(f"Long press failed: {exc}", level="error")
+
+
+def on_held():
+    global _long_pressed
+    _long_pressed = True
+    on_long_press()
+
+
+def on_released():
+    global _long_pressed
+    if _long_pressed:
+        _long_pressed = False
+        return
+    on_short_press()
 
 
 def _shutdown(*_args):
@@ -314,6 +382,7 @@ def _shutdown(*_args):
 # --------------------------------------------------------------------------
 def main():
     gpio_pin = int(plugin.get_setting("GpioPin", 20))
+    long_press = max(0.5, float(plugin.get_setting("LongPressSeconds", 2)))
 
     signal.signal(signal.SIGTERM, _shutdown)
     signal.signal(signal.SIGINT, _shutdown)
@@ -324,11 +393,14 @@ def main():
         gpio_pin,
         pull_up=True,
         bounce_time=0.05,
+        hold_time=long_press,
+        hold_repeat=False,
         pin_factory=_find_gpio_pin_factory(),
     )
-    button.when_pressed = toggle
+    button.when_held = on_held
+    button.when_released = on_released
 
-    plugin.log(f"WebPageButtonPlugin ready on GPIO{gpio_pin}.")
+    plugin.log(f"WebPageButtonPlugin ready on GPIO{gpio_pin} (long press = {long_press} s).")
     plugin.ready()
     _shutdown_event.wait()
 
