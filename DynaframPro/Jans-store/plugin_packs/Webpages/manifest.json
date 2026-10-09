@@ -1,8 +1,8 @@
 {
   "Name": "WebPageButtonPlugin",
   "Author": "Jan",
-  "Description": "GPIO button control for web pages: a short press opens the first configured page full screen on top of the slideshow, each further short press switches to the next page, a long press closes the browser.",
-  "Version": "0.2.0",
+  "Description": "GPIO button control for web pages: a short press opens the first configured page full screen on top of the slideshow, each further short press switches to the next page (in tabs), a long press closes the browser.",
+  "Version": "0.4",
   "DisplayName": "Web Page Button",
   "ManifestVersion": 1,
   "IconPath": null,
@@ -19,7 +19,7 @@
     {
       "Name": "Urls",
       "Type": "string",
-      "Description": "Address(es) of the web pages. Separate several pages with a space or a semicolon, e.g. http://192.168.1.10:8123 https://example.com. The first short press shows the first page, each further press the next one.",
+      "Description": "Address(es) of the web pages. Write several pages one after the other, separated by a space or a semicolon, e.g. http://192.168.1.10:8123 https://example.com. The first short press shows the first page, each further press the next one.",
       "DefaultValue": "https://example.com",
       "Value": "https://example.com"
     },
@@ -36,6 +36,13 @@
       "Description": "When active, the short press after the last page closes the browser. When off, it starts again with the first page.",
       "DefaultValue": false,
       "Value": false
+    },
+    {
+      "Name": "UseTabs",
+      "Type": "boolean",
+      "Description": "When active (default), Chromium keeps every page in its own tab and switching is instant. When off, the browser is restarted for every switch. Restart the plugin after changing it.",
+      "DefaultValue": true,
+      "Value": true
     },
     {
       "Name": "DisplayServer",

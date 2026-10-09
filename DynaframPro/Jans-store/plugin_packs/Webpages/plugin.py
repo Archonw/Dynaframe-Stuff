@@ -3,16 +3,20 @@
 WebPageButtonPlugin for Dynaframe Pro.
 
 A GPIO button shows web pages on top of the slideshow:
-- Short press, browser closed: opens the first configured page full screen (kiosk window).
-- Short press, browser open: switches to the next page. After the last page it starts again
-  with the first one, or closes the browser if CloseAfterLastPage is enabled.
+- Short press, browser closed: opens the first configured page (first address in Urls) full screen
+  (kiosk window).
+- Short press, browser open: switches to the next page. After the last page it starts again with
+  the first one, or closes the browser if CloseAfterLastPage is enabled.
 - Long press (LongPressSeconds, default 2 s): closes the browser, the slideshow is visible again.
 
 With only one configured page, a short press toggles it (open / close).
 
 The pages are shown by a separate browser process (Chromium or Firefox), so the plugin does not
-depend on the DynaFrame engine API. Closing the window (instead of minimizing it) works the same
-on X11 and Wayland; a page is reloaded every time it is shown.
+depend on the DynaFrame engine API. With Chromium every page gets its own tab and the plugin
+switches between the tabs through the local DevTools HTTP interface (127.0.0.1 only), so a switch
+is instant and the pages keep running in the background. A tab is created the first time its page
+is shown. If switching tabs fails, or UseTabs is off, the browser is restarted for every switch.
+Closing the window (instead of minimizing it) works the same on X11 and Wayland.
 """
 
 import os
@@ -47,6 +51,7 @@ sys.excepthook = _write_crash_log
 
 import atexit
 import glob
+import json
 import re
 import shlex
 import shutil
@@ -54,6 +59,9 @@ import signal
 import subprocess
 import threading
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -67,12 +75,16 @@ plugin = create_plugin()
 _PROFILE_DIR = os.path.join(_plugin_dir, "browser-profile")
 _BROWSER_LOG = os.path.join(_plugin_dir, "browser.log")
 _DEBOUNCE_SECONDS = 0.4
+_DEBUG_PORT = 9333   # Chromium DevTools port (127.0.0.1 only), used to switch tabs
 
 _lock = threading.Lock()
 _shutdown_event = threading.Event()
 _proc = None
 _index = -1          # index of the page that is currently shown (-1 = none)
 _last_press = 0.0
+_tabs = {}            # page index -> DevTools target id of its tab
+_first_index = 0     # page index of the tab the browser was started with
+_session_urls = None # list of pages the current browser session was started with
 _long_pressed = False
 
 
@@ -183,7 +195,7 @@ def find_browser():
     return None
 
 
-def build_command(url):
+def build_command(url, remote_debugging=False):
     base = find_browser()
     if not base:
         return None
@@ -201,6 +213,8 @@ def build_command(url):
     # handing the URL to an already running Chromium), --no-first-run for that fresh profile
     # and --disable-session-crashed-bubble because closing the window ends the process.
     args = []
+    if remote_debugging:
+        args.append(f"--remote-debugging-port={_DEBUG_PORT}")
     server = _display_server()
     if server in ("wayland", "x11"):
         args.append(f"--ozone-platform={server}")
@@ -237,6 +251,7 @@ def is_open():
 
 
 def get_urls():
+    """Pages from the Urls setting, separated by spaces, semicolons or line breaks."""
     raw = str(plugin.get_setting("Urls", "") or "").strip()
     if not raw:
         raw = str(plugin.get_setting("Url", "") or "").strip()  # setting name of version 0.1
@@ -254,7 +269,7 @@ def get_urls():
 
 def open_page(url):
     global _proc
-    cmd = build_command(url)
+    cmd = build_command(url, remote_debugging=_use_tabs())
     if not cmd:
         return False
     _kill_leftovers()
@@ -283,9 +298,11 @@ def open_page(url):
 
 
 def close_page(quiet=False):
-    global _proc, _index
+    global _proc, _index, _session_urls
     proc, _proc = _proc, None
     _index = -1
+    _tabs.clear()
+    _session_urls = None
     if proc is None:
         return
     if proc.poll() is None:
@@ -308,16 +325,66 @@ def close_page(quiet=False):
             pass
 
 
+def _use_tabs():
+    return str(plugin.get_setting("UseTabs", True)).lower() == "true"
+
+
+def _devtools(path, method="GET", timeout=3):
+    request = urllib.request.Request(f"http://127.0.0.1:{_DEBUG_PORT}{path}", method=method)
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        body = response.read().decode("utf-8", errors="replace")
+    stripped = body.lstrip()
+    return json.loads(body) if stripped[:1] in ("{", "[") else body
+
+
+def _devtools_switch(urls, index):
+    """Show urls[index] in its own tab. Returns False if the browser has to be restarted instead."""
+    try:
+        if _first_index not in _tabs:
+            # Only the tab the browser was started with exists so far.
+            pages = [t for t in _devtools("/json/list") if t.get("type") == "page"]
+            if len(pages) != 1:
+                return False
+            _tabs[_first_index] = pages[0]["id"]
+        if index in _tabs:
+            try:
+                _devtools(f"/json/activate/{_tabs[index]}")
+                return True
+            except urllib.error.HTTPError as exc:
+                if exc.code != 404:
+                    raise
+                _tabs.pop(index, None)  # the tab was closed in the meantime: create it again
+        target = _devtools("/json/new?" + urllib.parse.quote(urls[index], safe=""), method="PUT")
+        _tabs[index] = target["id"]
+        return True
+    except Exception as exc:
+        plugin.log(f"Switching tabs failed ({exc}); restarting the browser instead.", level="error")
+        return False
+
+
 def show_page(urls, index):
-    """Show urls[index]; an open browser window is closed first."""
-    global _index
+    """Start a fresh browser showing urls[index]; an open browser window is closed first."""
+    global _index, _first_index, _session_urls
     if is_open():
         close_page(quiet=True)
     if open_page(urls[index]):
         _index = index
+        _first_index = index
+        _session_urls = list(urls)
+        _tabs.clear()
         plugin.log(f"Showing page {index + 1} of {len(urls)}.")
     else:
         _index = -1
+
+
+def switch_to(urls, index):
+    """Switch to urls[index]: through tabs if possible, otherwise by restarting the browser."""
+    global _index
+    if is_open() and _use_tabs() and _session_urls == list(urls) and _devtools_switch(urls, index):
+        _index = index
+        plugin.log(f"Switched to page {index + 1} of {len(urls)} (tab).")
+        return
+    show_page(urls, index)
 
 
 def on_short_press():
@@ -343,7 +410,7 @@ def on_short_press():
                     close_page()
                     return
                 next_index = 0
-            show_page(urls, next_index)
+            switch_to(urls, next_index)
         except Exception as exc:
             plugin.log(f"Short press failed: {exc}", level="error")
 
