@@ -21,10 +21,12 @@ is instant and the pages keep running in the background. A tab is created the fi
 is shown. If switching tabs fails, or UseTabs is off, the browser is restarted for every switch.
 Closing the window (instead of minimizing it) works the same on X11 and Wayland.
 
-YouTube links (watch, youtu.be, shorts, live, playlist) are converted to the embedded player page
-(youtube.com/embed/...). That page contains nothing but the player, which fills the whole
-screen, and starts playing automatically. Videos stop when you switch to another page (their tab is
-closed, so they do not keep playing in the background). Can be switched off with YouTubeFullscreen.
+YouTube links (watch, youtu.be, shorts, live, playlist) are shown as an embedded player that fills
+the whole screen and starts playing automatically. YouTube refuses to play an embedded player that
+is opened without a referrer (error 153), so the plugin serves a tiny page on http://localhost
+(127.0.0.1 only) that contains the player in an iframe. Videos stop when you switch to another page
+(their tab is closed, so they do not keep playing in the background). Can be switched off with
+YouTubeFullscreen.
 """
 
 import os
@@ -59,6 +61,8 @@ sys.excepthook = _write_crash_log
 
 import atexit
 import glob
+import html
+import http.server
 import json
 import re
 import shlex
@@ -85,6 +89,7 @@ _BROWSER_LOG = os.path.join(_plugin_dir, "browser.log")
 _DEBOUNCE_SECONDS = 0.4
 _AUTO_TICK = 0.5          # how often the timer thread checks if the next page is due
 _MIN_AUTO_SECONDS = 5.0  # shortest allowed AutoSwitchSeconds
+_WRAPPER_PORT = 9334   # local page that embeds YouTube players (127.0.0.1 only)
 _DEBUG_PORT = 9333   # Chromium DevTools port (127.0.0.1 only), used to switch tabs
 
 _lock = threading.Lock()
@@ -94,6 +99,7 @@ _index = -1          # index of the page that is currently shown (-1 = none)
 _last_press = 0.0
 _tabs = {}            # page index -> DevTools target id of its tab
 _tabs_ready = False   # True once the tab the browser was started with is known
+_wrapper_base = None  # e.g. http://localhost:9334 once the local page server is running
 _first_index = 0     # page index of the tab the browser was started with
 _session_urls = None # list of pages the current browser session was started with
 _next_auto = None    # time.monotonic() value at which the next page is shown automatically
@@ -214,8 +220,67 @@ def youtube_to_embed(url):
     return base + "?" + urllib.parse.urlencode(params)
 
 
+def youtube_page_url(url):
+    """Address to open for a YouTube link: the local wrapper page (or the plain player if it is not running)."""
+    embed = youtube_to_embed(url)
+    if not embed:
+        return None
+    if _wrapper_base:
+        return f"{_wrapper_base}/yt?src={urllib.parse.quote(embed, safe='')}"
+    return embed
+
+
 def is_video_page(url):
-    return str(url).startswith(_YT_EMBED_PREFIX)
+    url = str(url)
+    if url.startswith(_YT_EMBED_PREFIX):
+        return True
+    parts = urlparse(url)
+    return parts.hostname == "localhost" and parts.path == "/yt"
+
+
+_WRAPPER_HTML = """<!doctype html>
+<html><head><meta charset="utf-8"><meta name="referrer" content="strict-origin-when-cross-origin">
+<title>YouTube</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}iframe{border:0;width:100%;height:100%}</style>
+</head><body><iframe src="{src}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></body></html>"""
+
+
+class _WrapperHandler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        parsed = urlparse(self.path)
+        src = (urllib.parse.parse_qs(parsed.query).get("src") or [""])[0]
+        if parsed.path != "/yt" or not src.startswith(_YT_EMBED_PREFIX):
+            self.send_error(404)
+            return
+        body = _WRAPPER_HTML.replace("{src}", html.escape(src, quote=True)).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *args):
+        pass
+
+
+def start_wrapper_server():
+    """Serve the wrapper page on 127.0.0.1 so that YouTube players get a valid referrer."""
+    global _wrapper_base
+    server = None
+    for port in (_WRAPPER_PORT, 0):
+        try:
+            server = http.server.ThreadingHTTPServer(("127.0.0.1", port), _WrapperHandler)
+            break
+        except OSError:
+            server = None
+    if server is None:
+        plugin.log("Could not start the local page for YouTube players; YouTube may show error 153.", level="error")
+        return
+    threading.Thread(target=server.serve_forever, name="youtube-wrapper", daemon=True).start()
+    _wrapper_base = f"http://localhost:{server.server_address[1]}"
 
 
 def _display_server():
@@ -335,7 +400,7 @@ def get_urls():
         url = normalize_url(part)
         if url:
             if youtube_fullscreen:
-                url = youtube_to_embed(url) or url
+                url = youtube_page_url(url) or url
             urls.append(url)
         else:
             plugin.log(f"Ignoring invalid address: {part}", level="error")
@@ -598,6 +663,7 @@ def main():
     signal.signal(signal.SIGINT, _shutdown)
     atexit.register(close_page)
     _kill_leftovers()
+    start_wrapper_server()
 
     button = Button(
         gpio_pin,

@@ -2,7 +2,7 @@
   "Name": "WebPageButtonPlugin",
   "Author": "Jan",
   "Description": "GPIO button control for web pages: a short press opens the first configured page full screen on top of the slideshow, each further short press switches to the next page (in tabs), a long press closes the browser. Optionally the pages can also switch automatically after a set time. YouTube links are shown as a full-screen player.",
-  "Version": "0.7",
+  "Version": "0.8",
   "DisplayName": "Web Page Button",
   "ManifestVersion": 1,
   "IconPath": null,
@@ -61,7 +61,7 @@
     {
       "Name": "YouTubeFullscreen",
       "Type": "boolean",
-      "Description": "When active (default), YouTube links (watch, youtu.be, shorts, live, playlist) are shown as a full-screen player that starts automatically. Turn off to open the normal YouTube page.",
+      "Description": "When active (default), YouTube links (watch, youtu.be, shorts, live, playlist) are shown as a full-screen player that starts automatically. A small local page (localhost only) is used so that YouTube accepts the player. Turn off to open the normal YouTube page.",
       "DefaultValue": true,
       "Value": true
     },
