@@ -1,8 +1,8 @@
 {
   "Name": "WebPageButtonPlugin",
   "Author": "Jan",
-  "Description": "GPIO button control for web pages: a short press opens the first configured page full screen on top of the slideshow, each further short press switches to the next page (in tabs), a long press closes the browser.",
-  "Version": "0.4",
+  "Description": "GPIO button control for web pages: a short press opens the first configured page full screen on top of the slideshow, each further short press switches to the next page (in tabs), a long press closes the browser. Optionally the pages can also switch automatically after a set time.",
+  "Version": "0.6",
   "DisplayName": "Web Page Button",
   "ManifestVersion": 1,
   "IconPath": null,
@@ -33,9 +33,23 @@
     {
       "Name": "CloseAfterLastPage",
       "Type": "boolean",
-      "Description": "When active, the short press after the last page closes the browser. When off, it starts again with the first page.",
+      "Description": "When active, the switch after the last page (by button or timer) closes the browser. When off, it starts again with the first page.",
       "DefaultValue": false,
       "Value": false
+    },
+    {
+      "Name": "AutoSwitch",
+      "Type": "boolean",
+      "Description": "Automatic switching, off by default. When active, the next page is shown automatically after AutoSwitchSeconds. When off, pages only change with the button.",
+      "DefaultValue": false,
+      "Value": false
+    },
+    {
+      "Name": "AutoSwitchSeconds",
+      "Type": "number",
+      "Description": "Only used when AutoSwitch is active: seconds after which the next page is shown (minimum 5). The button always works and restarts the timer.",
+      "DefaultValue": 30,
+      "Value": 30
     },
     {
       "Name": "UseTabs",

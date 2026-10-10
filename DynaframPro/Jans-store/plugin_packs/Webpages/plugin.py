@@ -8,8 +8,11 @@ A GPIO button shows web pages on top of the slideshow:
 - Short press, browser open: switches to the next page. After the last page it starts again with
   the first one, or closes the browser if CloseAfterLastPage is enabled.
 - Long press (LongPressSeconds, default 2 s): closes the browser, the slideshow is visible again.
+- Optional automatic switching (off by default): only when the option AutoSwitch is active, the
+  next page is shown automatically after AutoSwitchSeconds. Pressing the button switches
+  immediately and restarts the timer. With the option off, pages change only with the button.
 
-With only one configured page, a short press toggles it (open / close).
+With only one configured page, a short press toggles it (open / close); the timer leaves it alone.
 
 The pages are shown by a separate browser process (Chromium or Firefox), so the plugin does not
 depend on the DynaFrame engine API. With Chromium every page gets its own tab and the plugin
@@ -75,6 +78,8 @@ plugin = create_plugin()
 _PROFILE_DIR = os.path.join(_plugin_dir, "browser-profile")
 _BROWSER_LOG = os.path.join(_plugin_dir, "browser.log")
 _DEBOUNCE_SECONDS = 0.4
+_AUTO_TICK = 0.5          # how often the timer thread checks if the next page is due
+_MIN_AUTO_SECONDS = 5.0  # shortest allowed AutoSwitchSeconds
 _DEBUG_PORT = 9333   # Chromium DevTools port (127.0.0.1 only), used to switch tabs
 
 _lock = threading.Lock()
@@ -85,6 +90,7 @@ _last_press = 0.0
 _tabs = {}            # page index -> DevTools target id of its tab
 _first_index = 0     # page index of the tab the browser was started with
 _session_urls = None # list of pages the current browser session was started with
+_next_auto = None    # time.monotonic() value at which the next page is shown automatically
 _long_pressed = False
 
 
@@ -298,11 +304,12 @@ def open_page(url):
 
 
 def close_page(quiet=False):
-    global _proc, _index, _session_urls
+    global _proc, _index, _session_urls, _next_auto
     proc, _proc = _proc, None
     _index = -1
     _tabs.clear()
     _session_urls = None
+    _next_auto = None
     if proc is None:
         return
     if proc.poll() is None:
@@ -323,6 +330,24 @@ def close_page(quiet=False):
             plugin.report_activity("Web page closed", "")
         except Exception:
             pass
+
+
+def _auto_seconds():
+    """Display time per page in seconds, or 0 if automatic switching is not activated."""
+    if str(plugin.get_setting("AutoSwitch", False)).lower() != "true":
+        return 0.0
+    try:
+        value = float(plugin.get_setting("AutoSwitchSeconds", 30) or 0)
+    except (TypeError, ValueError):
+        return 0.0
+    return 0.0 if value <= 0 else max(_MIN_AUTO_SECONDS, value)
+
+
+def _schedule_auto():
+    """(Re)start the timer for the page that is shown now; does nothing if auto switching is off."""
+    global _next_auto
+    seconds = _auto_seconds()
+    _next_auto = time.monotonic() + seconds if seconds > 0 else None
 
 
 def _use_tabs():
@@ -373,6 +398,7 @@ def show_page(urls, index):
         _session_urls = list(urls)
         _tabs.clear()
         plugin.log(f"Showing page {index + 1} of {len(urls)}.")
+        _schedule_auto()
     else:
         _index = -1
 
@@ -383,8 +409,25 @@ def switch_to(urls, index):
     if is_open() and _use_tabs() and _session_urls == list(urls) and _devtools_switch(urls, index):
         _index = index
         plugin.log(f"Switched to page {index + 1} of {len(urls)} (tab).")
+        _schedule_auto()
         return
     show_page(urls, index)
+
+
+def _advance(urls, auto):
+    """Show the next page, start over, or close the browser after the last page."""
+    current = _index if is_open() else -1
+    next_index = current + 1
+    if next_index >= len(urls):
+        close_after_last = str(plugin.get_setting("CloseAfterLastPage", False)).lower() == "true"
+        if current >= 0 and (close_after_last or (len(urls) == 1 and not auto)):
+            close_page()
+            return
+        if current >= 0 and len(urls) == 1:
+            _schedule_auto()  # automatic switching with a single page: nothing to switch to
+            return
+        next_index = 0
+    switch_to(urls, next_index)
 
 
 def on_short_press():
@@ -399,20 +442,33 @@ def on_short_press():
             if not urls:
                 plugin.log("The Urls setting contains no valid http(s) address.", level="error")
                 return
-            if not is_open():
-                current = -1
-            else:
-                current = _index
-            next_index = current + 1
-            if next_index >= len(urls):
-                close_after_last = str(plugin.get_setting("CloseAfterLastPage", False)).lower() == "true"
-                if current >= 0 and (close_after_last or len(urls) == 1):
-                    close_page()
-                    return
-                next_index = 0
-            switch_to(urls, next_index)
+            _advance(urls, auto=False)
         except Exception as exc:
             plugin.log(f"Short press failed: {exc}", level="error")
+
+
+def on_auto_advance():
+    """Called by the timer thread when the display time of the current page is over."""
+    global _next_auto
+    with _lock:
+        if _next_auto is None or time.monotonic() < _next_auto or not is_open():
+            return
+        try:
+            urls = get_urls()
+            if not urls:
+                _next_auto = None
+                return
+            _advance(urls, auto=True)
+        except Exception as exc:
+            plugin.log(f"Automatic switch failed: {exc}", level="error")
+            _next_auto = time.monotonic() + 10
+
+
+def _auto_loop():
+    while not _shutdown_event.wait(_AUTO_TICK):
+        due = _next_auto
+        if due is not None and time.monotonic() >= due:
+            on_auto_advance()
 
 
 def on_long_press():
@@ -466,8 +522,11 @@ def main():
     )
     button.when_held = on_held
     button.when_released = on_released
+    threading.Thread(target=_auto_loop, name="auto-switch", daemon=True).start()
 
-    plugin.log(f"WebPageButtonPlugin ready on GPIO{gpio_pin} (long press = {long_press} s).")
+    auto = _auto_seconds()
+    plugin.log(f"WebPageButtonPlugin ready on GPIO{gpio_pin} (long press = {long_press} s, "
+               f"automatic switching = {'off' if auto <= 0 else str(auto) + ' s'}).")
     plugin.ready()
     _shutdown_event.wait()
 
