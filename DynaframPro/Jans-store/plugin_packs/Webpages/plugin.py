@@ -20,6 +20,11 @@ switches between the tabs through the local DevTools HTTP interface (127.0.0.1 o
 is instant and the pages keep running in the background. A tab is created the first time its page
 is shown. If switching tabs fails, or UseTabs is off, the browser is restarted for every switch.
 Closing the window (instead of minimizing it) works the same on X11 and Wayland.
+
+YouTube links (watch, youtu.be, shorts, live, playlist) are converted to the embedded player page
+(youtube.com/embed/...). That page contains nothing but the player, which fills the whole
+screen, and starts playing automatically. Videos stop when you switch to another page (their tab is
+closed, so they do not keep playing in the background). Can be switched off with YouTubeFullscreen.
 """
 
 import os
@@ -88,6 +93,7 @@ _proc = None
 _index = -1          # index of the page that is currently shown (-1 = none)
 _last_press = 0.0
 _tabs = {}            # page index -> DevTools target id of its tab
+_tabs_ready = False   # True once the tab the browser was started with is known
 _first_index = 0     # page index of the tab the browser was started with
 _session_urls = None # list of pages the current browser session was started with
 _next_auto = None    # time.monotonic() value at which the next page is shown automatically
@@ -151,6 +157,65 @@ def normalize_url(raw):
     if urlparse(url).scheme not in ("http", "https", "file"):
         return ""
     return url
+
+
+_YT_VIDEO_ID = re.compile(r"[A-Za-z0-9_-]{6,20}")
+_YT_LIST_ID = re.compile(r"[A-Za-z0-9_-]{6,64}")
+_YT_EMBED_PREFIX = "https://www.youtube.com/embed/"
+
+
+def _youtube_start_seconds(value):
+    value = str(value or "").strip().lower()
+    if value.isdigit():
+        return int(value)
+    match = re.fullmatch(r"(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?", value)
+    if match and any(match.groups()):
+        hours, minutes, seconds = (int(g or 0) for g in match.groups())
+        return hours * 3600 + minutes * 60 + seconds
+    return 0
+
+
+def youtube_to_embed(url):
+    """Return the embedded player URL for a YouTube link, or None if it is not one."""
+    parts = urlparse(url)
+    host = (parts.hostname or "").lower()
+    for prefix in ("www.", "m."):
+        if host.startswith(prefix):
+            host = host[len(prefix):]
+    query = urllib.parse.parse_qs(parts.query)
+    segments = [x for x in parts.path.split("/") if x]
+    video = ""
+    if host == "youtu.be":
+        video = segments[0] if segments else ""
+    elif host == "youtube.com" and segments:
+        if segments[0] == "watch":
+            video = (query.get("v") or [""])[0]
+        elif segments[0] in ("shorts", "live", "v") and len(segments) > 1:
+            video = segments[1]
+        elif segments[0] != "playlist":
+            return None
+    else:
+        return None
+    playlist = (query.get("list") or [""])[0]
+    if video and not _YT_VIDEO_ID.fullmatch(video):
+        return None
+    if playlist and not _YT_LIST_ID.fullmatch(playlist):
+        playlist = ""
+    if not video and not playlist:
+        return None
+    params = {"autoplay": "1", "controls": "0", "rel": "0", "modestbranding": "1",
+              "playsinline": "1", "iv_load_policy": "3"}
+    start = _youtube_start_seconds((query.get("t") or query.get("start") or [""])[0])
+    if start:
+        params["start"] = str(start)
+    if playlist:
+        params["list"] = playlist
+    base = _YT_EMBED_PREFIX + (video if video else "videoseries")
+    return base + "?" + urllib.parse.urlencode(params)
+
+
+def is_video_page(url):
+    return str(url).startswith(_YT_EMBED_PREFIX)
 
 
 def _display_server():
@@ -228,6 +293,7 @@ def build_command(url, remote_debugging=False):
         "--kiosk",
         "--noerrdialogs",
         "--password-store=basic",
+        "--autoplay-policy=no-user-gesture-required",
         "--no-first-run",
         "--disable-session-crashed-bubble",
         f"--user-data-dir={_PROFILE_DIR}",
@@ -261,12 +327,15 @@ def get_urls():
     raw = str(plugin.get_setting("Urls", "") or "").strip()
     if not raw:
         raw = str(plugin.get_setting("Url", "") or "").strip()  # setting name of version 0.1
+    youtube_fullscreen = str(plugin.get_setting("YouTubeFullscreen", True)).lower() == "true"
     urls = []
     for part in re.split(r"[\s;]+", raw):
         if not part:
             continue
         url = normalize_url(part)
         if url:
+            if youtube_fullscreen:
+                url = youtube_to_embed(url) or url
             urls.append(url)
         else:
             plugin.log(f"Ignoring invalid address: {part}", level="error")
@@ -304,10 +373,11 @@ def open_page(url):
 
 
 def close_page(quiet=False):
-    global _proc, _index, _session_urls, _next_auto
+    global _proc, _index, _session_urls, _next_auto, _tabs_ready
     proc, _proc = _proc, None
     _index = -1
     _tabs.clear()
+    _tabs_ready = False
     _session_urls = None
     _next_auto = None
     if proc is None:
@@ -364,13 +434,15 @@ def _devtools(path, method="GET", timeout=3):
 
 def _devtools_switch(urls, index):
     """Show urls[index] in its own tab. Returns False if the browser has to be restarted instead."""
+    global _tabs_ready
     try:
-        if _first_index not in _tabs:
+        if not _tabs_ready:
             # Only the tab the browser was started with exists so far.
             pages = [t for t in _devtools("/json/list") if t.get("type") == "page"]
             if len(pages) != 1:
                 return False
             _tabs[_first_index] = pages[0]["id"]
+            _tabs_ready = True
         if index in _tabs:
             try:
                 _devtools(f"/json/activate/{_tabs[index]}")
@@ -387,9 +459,20 @@ def _devtools_switch(urls, index):
         return False
 
 
+def _close_video_tab(urls, index):
+    """A video keeps playing (with sound) in a background tab, so the tab of a video is closed when left."""
+    if index < 0 or index >= len(urls) or index not in _tabs or not is_video_page(urls[index]):
+        return
+    try:
+        _devtools(f"/json/close/{_tabs[index]}")
+    except Exception as exc:
+        plugin.log(f"Could not close the tab of page {index + 1}: {exc}", level="error")
+    _tabs.pop(index, None)
+
+
 def show_page(urls, index):
     """Start a fresh browser showing urls[index]; an open browser window is closed first."""
-    global _index, _first_index, _session_urls
+    global _index, _first_index, _session_urls, _tabs_ready
     if is_open():
         close_page(quiet=True)
     if open_page(urls[index]):
@@ -397,6 +480,7 @@ def show_page(urls, index):
         _first_index = index
         _session_urls = list(urls)
         _tabs.clear()
+        _tabs_ready = False
         plugin.log(f"Showing page {index + 1} of {len(urls)}.")
         _schedule_auto()
     else:
@@ -406,7 +490,10 @@ def show_page(urls, index):
 def switch_to(urls, index):
     """Switch to urls[index]: through tabs if possible, otherwise by restarting the browser."""
     global _index
+    previous = _index
     if is_open() and _use_tabs() and _session_urls == list(urls) and _devtools_switch(urls, index):
+        if previous != index:
+            _close_video_tab(urls, previous)
         _index = index
         plugin.log(f"Switched to page {index + 1} of {len(urls)} (tab).")
         _schedule_auto()

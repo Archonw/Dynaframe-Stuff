@@ -1,8 +1,8 @@
 {
   "Name": "WebPageButtonPlugin",
   "Author": "Jan",
-  "Description": "GPIO button control for web pages: a short press opens the first configured page full screen on top of the slideshow, each further short press switches to the next page (in tabs), a long press closes the browser. Optionally the pages can also switch automatically after a set time.",
-  "Version": "0.6",
+  "Description": "GPIO button control for web pages: a short press opens the first configured page full screen on top of the slideshow, each further short press switches to the next page (in tabs), a long press closes the browser. Optionally the pages can also switch automatically after a set time. YouTube links are shown as a full-screen player.",
+  "Version": "0.7",
   "DisplayName": "Web Page Button",
   "ManifestVersion": 1,
   "IconPath": null,
@@ -55,6 +55,13 @@
       "Name": "UseTabs",
       "Type": "boolean",
       "Description": "When active (default), Chromium keeps every page in its own tab and switching is instant. When off, the browser is restarted for every switch. Restart the plugin after changing it.",
+      "DefaultValue": true,
+      "Value": true
+    },
+    {
+      "Name": "YouTubeFullscreen",
+      "Type": "boolean",
+      "Description": "When active (default), YouTube links (watch, youtu.be, shorts, live, playlist) are shown as a full-screen player that starts automatically. Turn off to open the normal YouTube page.",
       "DefaultValue": true,
       "Value": true
     },
