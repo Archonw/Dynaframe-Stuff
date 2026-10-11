@@ -19,6 +19,12 @@ depend on the DynaFrame engine API. With Chromium every page gets its own tab an
 switches between the tabs through the local DevTools HTTP interface (127.0.0.1 only), so a switch
 is instant and the pages keep running in the background. A tab is created the first time its page
 is shown. If switching tabs fails, or UseTabs is off, the browser is restarted for every switch.
+
+Fresh pages without waiting (PreloadNext, on by default): while you look at a page, a background
+thread prepares the page that comes next in a background tab. A page that was loaded more than
+PreloadMaxAgeSeconds ago is reloaded in the background (through the DevTools WebSocket). When you
+switch, the finished page appears instantly. Video pages are not prepared, because they would start
+playing in the background. If preparing fails, switching still works as before.
 Closing the window (instead of minimizing it) works the same on X11 and Wayland.
 
 YouTube links (watch, youtu.be, shorts, live, playlist) are shown as an embedded player that fills
@@ -60,6 +66,7 @@ def _write_crash_log(exc_type, exc_value, exc_tb):
 sys.excepthook = _write_crash_log
 
 import atexit
+import base64
 import glob
 import html
 import http.server
@@ -68,6 +75,8 @@ import re
 import shlex
 import shutil
 import signal
+import socket
+import struct
 import subprocess
 import threading
 import time
@@ -87,6 +96,7 @@ plugin = create_plugin()
 _PROFILE_DIR = os.path.join(_plugin_dir, "browser-profile")
 _BROWSER_LOG = os.path.join(_plugin_dir, "browser.log")
 _DEBOUNCE_SECONDS = 0.4
+_PRELOAD_TICK = 2.0       # how often the background thread checks if the next page needs loading
 _AUTO_TICK = 0.5          # how often the timer thread checks if the next page is due
 _MIN_AUTO_SECONDS = 5.0  # shortest allowed AutoSwitchSeconds
 _WRAPPER_PORT = 9334   # local page that embeds YouTube players (127.0.0.1 only)
@@ -100,6 +110,11 @@ _last_press = 0.0
 _tabs = {}            # page index -> DevTools target id of its tab
 _tabs_ready = False   # True once the tab the browser was started with is known
 _wrapper_base = None  # e.g. http://localhost:9334 once the local page server is running
+_loaded_at = {}       # page index -> time.monotonic() when its tab was last loaded
+_preload_cfg = {"enabled": False, "max_age": 180.0, "tabs": True, "close_after_last": False}
+_preload_blocked = False       # True if the tabs of this browser session cannot be prepared
+_preload_pause_until = 0.0     # no preparing before this time (after an error)
+_preload_error_logged = False
 _first_index = 0     # page index of the tab the browser was started with
 _session_urls = None # list of pages the current browser session was started with
 _next_auto = None    # time.monotonic() value at which the next page is shown automatically
@@ -438,11 +453,14 @@ def open_page(url):
 
 
 def close_page(quiet=False):
-    global _proc, _index, _session_urls, _next_auto, _tabs_ready
+    global _proc, _index, _session_urls, _next_auto, _tabs_ready, _preload_blocked, _preload_pause_until
     proc, _proc = _proc, None
     _index = -1
     _tabs.clear()
+    _loaded_at.clear()
     _tabs_ready = False
+    _preload_blocked = False
+    _preload_pause_until = 0.0
     _session_urls = None
     _next_auto = None
     if proc is None:
@@ -497,17 +515,99 @@ def _devtools(path, method="GET", timeout=3):
     return json.loads(body) if stripped[:1] in ("{", "[") else body
 
 
+def _ws_frame(payload):
+    """One masked WebSocket text frame (clients must mask)."""
+    mask = os.urandom(4)
+    length = len(payload)
+    if length < 126:
+        header = bytes([0x81, 0x80 | length])
+    elif length < 65536:
+        header = bytes([0x81, 0x80 | 126]) + struct.pack(">H", length)
+    else:
+        header = bytes([0x81, 0x80 | 127]) + struct.pack(">Q", length)
+    return header + mask + bytes(b ^ mask[i % 4] for i, b in enumerate(payload))
+
+
+def _ws_read_exact(sock, buffer, count):
+    while len(buffer) < count:
+        chunk = sock.recv(65536)
+        if not chunk:
+            raise ConnectionError("connection closed")
+        buffer.extend(chunk)
+    data = bytes(buffer[:count])
+    del buffer[:count]
+    return data
+
+
+def _ws_read_message(sock, buffer):
+    message = b""
+    while True:
+        first, second = _ws_read_exact(sock, buffer, 2)
+        opcode = first & 0x0F
+        length = second & 0x7F
+        if length == 126:
+            length = struct.unpack(">H", _ws_read_exact(sock, buffer, 2))[0]
+        elif length == 127:
+            length = struct.unpack(">Q", _ws_read_exact(sock, buffer, 8))[0]
+        mask = _ws_read_exact(sock, buffer, 4) if second & 0x80 else None
+        payload = _ws_read_exact(sock, buffer, length)
+        if mask:
+            payload = bytes(b ^ mask[i % 4] for i, b in enumerate(payload))
+        if opcode == 8:
+            raise ConnectionError("closed by the browser")
+        if opcode in (9, 10):
+            continue
+        message += payload
+        if first & 0x80:
+            return message
+
+
+def _cdp(ws_url, method, params=None, timeout=5):
+    """Run one Chrome DevTools Protocol command over a short-lived WebSocket (standard library only)."""
+    parts = urlparse(ws_url)
+    sock = socket.create_connection((parts.hostname, parts.port), timeout=timeout)
+    try:
+        key = base64.b64encode(os.urandom(16)).decode()
+        sock.sendall((f"GET {parts.path} HTTP/1.1\r\nHost: {parts.hostname}:{parts.port}\r\n"
+                      "Upgrade: websocket\r\nConnection: Upgrade\r\n"
+                      f"Sec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\n\r\n").encode())
+        buffer = bytearray()
+        while b"\r\n\r\n" not in buffer:
+            chunk = sock.recv(4096)
+            if not chunk:
+                raise ConnectionError("handshake failed")
+            buffer.extend(chunk)
+        head, _, rest = bytes(buffer).partition(b"\r\n\r\n")
+        if b" 101 " not in head.split(b"\r\n", 1)[0]:
+            raise ConnectionError("the browser refused the WebSocket connection")
+        buffer = bytearray(rest)
+        sock.sendall(_ws_frame(json.dumps({"id": 1, "method": method, "params": params or {}}).encode()))
+        while True:
+            reply = json.loads(_ws_read_message(sock, buffer))
+            if reply.get("id") == 1:
+                if "error" in reply:
+                    raise RuntimeError(reply["error"].get("message", reply["error"]))
+                return reply.get("result", {})
+    finally:
+        sock.close()
+
+
+def _map_first_tab():
+    """Find the tab the browser was started with. False if the session has more than one tab."""
+    global _tabs_ready
+    pages = [t for t in _devtools("/json/list") if t.get("type") == "page"]
+    if len(pages) != 1:
+        return False
+    _tabs[_first_index] = pages[0]["id"]
+    _tabs_ready = True
+    return True
+
+
 def _devtools_switch(urls, index):
     """Show urls[index] in its own tab. Returns False if the browser has to be restarted instead."""
-    global _tabs_ready
     try:
-        if not _tabs_ready:
-            # Only the tab the browser was started with exists so far.
-            pages = [t for t in _devtools("/json/list") if t.get("type") == "page"]
-            if len(pages) != 1:
-                return False
-            _tabs[_first_index] = pages[0]["id"]
-            _tabs_ready = True
+        if not _tabs_ready and not _map_first_tab():
+            return False
         if index in _tabs:
             try:
                 _devtools(f"/json/activate/{_tabs[index]}")
@@ -518,6 +618,7 @@ def _devtools_switch(urls, index):
                 _tabs.pop(index, None)  # the tab was closed in the meantime: create it again
         target = _devtools("/json/new?" + urllib.parse.quote(urls[index], safe=""), method="PUT")
         _tabs[index] = target["id"]
+        _loaded_at[index] = time.monotonic()
         return True
     except Exception as exc:
         plugin.log(f"Switching tabs failed ({exc}); restarting the browser instead.", level="error")
@@ -533,11 +634,12 @@ def _close_video_tab(urls, index):
     except Exception as exc:
         plugin.log(f"Could not close the tab of page {index + 1}: {exc}", level="error")
     _tabs.pop(index, None)
+    _loaded_at.pop(index, None)
 
 
 def show_page(urls, index):
     """Start a fresh browser showing urls[index]; an open browser window is closed first."""
-    global _index, _first_index, _session_urls, _tabs_ready
+    global _index, _first_index, _session_urls, _tabs_ready, _preload_blocked
     if is_open():
         close_page(quiet=True)
     if open_page(urls[index]):
@@ -545,8 +647,12 @@ def show_page(urls, index):
         _first_index = index
         _session_urls = list(urls)
         _tabs.clear()
+        _loaded_at.clear()
+        _loaded_at[index] = time.monotonic()
         _tabs_ready = False
+        _preload_blocked = False
         plugin.log(f"Showing page {index + 1} of {len(urls)}.")
+        _refresh_preload_cfg()
         _schedule_auto()
     else:
         _index = -1
@@ -561,9 +667,93 @@ def switch_to(urls, index):
             _close_video_tab(urls, previous)
         _index = index
         plugin.log(f"Switched to page {index + 1} of {len(urls)} (tab).")
+        _refresh_preload_cfg()
         _schedule_auto()
         return
     show_page(urls, index)
+
+
+def _refresh_preload_cfg():
+    """Read the preload settings (done whenever a page is shown, so the timer thread needs no settings access)."""
+    global _preload_cfg
+    try:
+        max_age = max(0.0, float(plugin.get_setting("PreloadMaxAgeSeconds", 180)))
+    except (TypeError, ValueError):
+        max_age = 180.0
+    _preload_cfg = {
+        "enabled": str(plugin.get_setting("PreloadNext", True)).lower() == "true",
+        "max_age": max_age,
+        "tabs": _use_tabs(),
+        "close_after_last": str(plugin.get_setting("CloseAfterLastPage", False)).lower() == "true",
+    }
+
+
+def _preload_tick():
+    """Prepare the page that a switch would show next: load it in a background tab or reload an old one."""
+    global _preload_blocked, _preload_pause_until, _preload_error_logged
+    with _lock:
+        cfg = _preload_cfg
+        urls = _session_urls
+        if (not cfg["enabled"] or not cfg["tabs"] or _preload_blocked or urls is None or not is_open()
+                or _index < 0 or len(urls) < 2 or time.monotonic() < _preload_pause_until):
+            return
+        session = _proc
+        try:
+            if not _tabs_ready and not _map_first_tab():
+                _preload_blocked = True  # the session has more than one tab: leave it alone
+                return
+        except Exception:
+            return  # DevTools is not ready yet, try again at the next tick
+        nxt = _index + 1
+        if nxt >= len(urls):
+            if cfg["close_after_last"]:
+                return
+            nxt = 0
+        if nxt == _index or is_video_page(urls[nxt]):
+            return
+        tab_id = _tabs.get(nxt)
+        if tab_id is not None and time.monotonic() - _loaded_at.get(nxt, 0.0) <= cfg["max_age"]:
+            return
+        url = urls[nxt]
+
+    try:  # network calls without holding the lock, so button presses are never delayed
+        if tab_id is None:
+            browser_ws = _devtools("/json/version")["webSocketDebuggerUrl"]
+            new_id = _cdp(browser_ws, "Target.createTarget", {"url": url, "background": True})["targetId"]
+        else:
+            _cdp(f"ws://127.0.0.1:{_DEBUG_PORT}/devtools/page/{tab_id}", "Page.reload", {"ignoreCache": True})
+            new_id = tab_id
+    except Exception as exc:
+        with _lock:
+            _preload_pause_until = time.monotonic() + 30
+            if tab_id is not None and _tabs.get(nxt) == tab_id:
+                _tabs.pop(nxt, None)  # the tab is gone; it will be created again
+            if not _preload_error_logged:
+                _preload_error_logged = True
+                plugin.log(f"Preparing the next page in the background failed ({exc}); switching still works.",
+                           level="error")
+        return
+
+    with _lock:
+        if _proc is not session or _session_urls is not urls:
+            return  # the browser was restarted or closed in the meantime
+        if tab_id is None:
+            if nxt in _tabs:  # a switch created the tab in the meantime: drop the duplicate
+                try:
+                    _devtools(f"/json/close/{new_id}")
+                except Exception:
+                    pass
+            else:
+                _tabs[nxt] = new_id
+        _loaded_at[nxt] = time.monotonic()
+
+
+def _preload_loop():
+    while not _shutdown_event.wait(_PRELOAD_TICK):
+        try:
+            _preload_tick()
+        except Exception as exc:
+            plugin.log(f"Background preparation failed: {exc}", level="error")
 
 
 def _advance(urls, auto):
@@ -676,6 +866,8 @@ def main():
     button.when_held = on_held
     button.when_released = on_released
     threading.Thread(target=_auto_loop, name="auto-switch", daemon=True).start()
+    _refresh_preload_cfg()
+    threading.Thread(target=_preload_loop, name="preload", daemon=True).start()
 
     auto = _auto_seconds()
     plugin.log(f"WebPageButtonPlugin ready on GPIO{gpio_pin} (long press = {long_press} s, "

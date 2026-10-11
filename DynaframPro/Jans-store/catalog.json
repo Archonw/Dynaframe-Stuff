@@ -29,14 +29,14 @@
       "title": "Web Page Button",
       "author": "Jan",
       "description": "GPIO button that opens a web page full screen on top of the slideshow and closes it again with the next press",
-      "version": "0.7.2",
-      "updated": "2026-10-10T13:26:00Z",
+      "version": "0.9",
+      "updated": "2026-10-11T13:35:00Z",
       "thumbnails": [
         "plugin_packs/Webpages/thumb.webp"
       ],
       "download_url": "plugin_packs/Webpages/webpages.zip",
-      "size": "21474",
-      "checksum": "025f07104555b43ce23b30c389378b50ec90fc309f2cfc7589003c0092a7ca4f"
+      "size": "23892",
+      "checksum": "962adef48568816044041d68de405a7aa55372ae2de507246f2c4a4bfa7411e5"
     }
   ]
 }
