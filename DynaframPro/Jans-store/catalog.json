@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "generated": "2026-10-12T20:13:15Z",
+  "generated": "2026-10-12T20:22:05Z",
   "store": {
     "name": "Jan's Store",
     "author": "Jan",
@@ -59,14 +59,14 @@
       "title": "Connect Nextcloud Shares to Dynaframe",
       "author": "Jan",
       "description": "You can connect Nexcloud shares to Dnaframe",
-      "version": "0.1.0",
-      "updated": "2026-10-12T20:13:15Z",
+      "version": "0.2.0",
+      "updated": "2026-10-12T20:22:05Z",
       "thumbnails": [
         "plugin_packs/nextcloud/thumb.webp"
       ],
       "download_url": "plugin_packs/nextcloud/NextcloudShare.zip",
-      "size": 6152,
-      "checksum": "d525b600c724da5a0dd6726f990bf3f8c6b7ea9d134ea7441f5903be8fdedc57"
+      "size": 6286,
+      "checksum": "e01a969066ac4c2f80409a75e389a6c0772cb3fb6507a82a26925a6b8b2fe504"
     }
   ]
 }
