@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "generated": "2026-10-12T20:27:56Z",
+  "generated": "2026-10-12T20:33:20Z",
   "store": {
     "name": "Jan's Store",
     "author": "Jan",
@@ -39,21 +39,6 @@
       "checksum": "962adef48568816044041d68de405a7aa55372ae2de507246f2c4a4bfa7411e5"
     },
     {
-      "id": "jellyfin-now-playing",
-      "type": "plugin",
-      "title": "Jellyfin Now Playing",
-      "author": "Jan",
-      "description": "Shows the cover of the movie, series or album a chosen Jellyfin user is watching right now.",
-      "version": "0.3.1",
-      "updated": "2026-10-12T19:57:23Z",
-      "thumbnails": [
-        "plugin_packs/jellyfin/thumb.webp"
-      ],
-      "download_url": "plugin_packs/jellyfin/JellyfinNowPlaying.zip",
-      "size": 25599,
-      "checksum": "0bf7491434f84824fe140bd14364841ecbca324cbcb8e2b34870efbcd39a8214"
-    },
-    {
       "id": "Nextcloud",
       "type": "plugin",
       "title": "Connect Nextcloud Shares to Dynaframe",
@@ -67,6 +52,21 @@
       "download_url": "plugin_packs/nextcloud/NextcloudShare.zip",
       "size": 6269,
       "checksum": "2525007ac30841258841ee0eb0bd496525ea9967001b6f80a89c1f0f2cb43c3a"
+    },
+    {
+      "id": "jellyfin-now-playing",
+      "type": "plugin",
+      "title": "Jellyfin Now Playing",
+      "author": "Jan",
+      "description": "Shows the cover of the movie, series or album a chosen Jellyfin user is watching right now.",
+      "version": "0.3.2",
+      "updated": "2026-10-12T20:33:20Z",
+      "thumbnails": [
+        "plugin_packs/jellyfin/thumb.webp"
+      ],
+      "download_url": "plugin_packs/jellyfin/JellyfinNowPlaying.zip",
+      "size": 11608,
+      "checksum": "4313e46a5284206eab2089a2900d68b1bd22f7b40d590f52a327696f705e1fcb"
     }
   ]
 }
