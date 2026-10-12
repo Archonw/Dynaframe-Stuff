@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "generated": "2026-10-12T17:54:04Z",
+  "generated": "2026-10-12T18:07:31Z",
   "store": {
     "name": "Jan's Store",
     "author": "Jan",
@@ -44,14 +44,14 @@
       "title": "Jellyfin Now Playing",
       "author": "Jan",
       "description": "Shows the cover of the movie, series or album a chosen Jellyfin user is watching right now.",
-      "version": "0.1.0",
-      "updated": "2026-10-12T17:54:04Z",
+      "version": "0.1.1",
+      "updated": "2026-10-12T18:07:31Z",
       "thumbnails": [
         "plugin_packs/jellyfin/thumb.webp"
       ],
       "download_url": "plugin_packs/jellyfin/JellyfinNowPlaying.zip",
-      "size": 5123,
-      "checksum": "a2e4841a361ceb2b54c2a67a98eb7d4a4d19fd7c4ce0ffce3d4d9c3de6a61871"
+      "size": 5128,
+      "checksum": "273809daf7ad7f16e1dafb0d881bb2d957c46b3778a8c3c392ff560505de23f0"
     }
   ]
 }
