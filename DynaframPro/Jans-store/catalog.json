@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "generated": "2026-10-13T13:55:38Z",
+  "generated": "2026-10-13T14:10:56Z",
   "store": {
     "name": "Jan's Store",
     "author": "Jan",
@@ -60,13 +60,13 @@
       "author": "Jan",
       "description": "You can connect Nexcloud shares to Dnaframe",
       "version": "0.2.0",
-      "updated": "2026-10-13T13:55:38Z",
+      "updated": "2026-10-13T14:10:56Z",
       "thumbnails": [
         "plugin_packs/nextcloud/thumb.webp"
       ],
       "download_url": "plugin_packs/nextcloud/NextcloudShare.zip",
-      "size": 7360,
-      "checksum": "207e1d7bbc70bf2172b22991ed12431c3c1e6727ad3f5069fbd5b05ebdcbef59"
+      "size": 15574,
+      "checksum": "b73ed441a3ca58d600f1b208e18d60b6ef78dd164a8d342644cce688a37a690b"
     }
   ]
 }
