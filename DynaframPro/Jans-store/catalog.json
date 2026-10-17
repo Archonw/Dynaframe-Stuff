@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "generated": "2026-10-17T20:36:13Z",
+  "generated": "2026-10-17T21:03:10Z",
   "store": {
     "name": "Jan's Store",
     "author": "Jan",
@@ -47,7 +47,7 @@
       "version": "0.3.4",
       "updated": "2026-10-13T13:39:01Z",
       "thumbnails": [
-        "plugin_packs/jellyfin/thumb.webp"
+        "plugin_packs/jellyfin/thumb-v2.webp"
       ],
       "download_url": "plugin_packs/jellyfin/JellyfinNowPlaying.zip",
       "size": 12309,
