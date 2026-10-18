@@ -87,6 +87,21 @@
       "download_url": "plugin_packs/american-football-live/AmericanFootballLive.zip",
       "size": 80533,
       "checksum": "9264696a83da9fbb806cf67ad6b7066a3f6e5760a02be2e2bba13ffec3473916"
+    },
+    {
+      "id": "world-map-live",
+      "type": "integration",
+      "title": "World Map Live",
+      "author": "Jan",
+      "description": "A calm world map with borders, day and night and the day-night line that shows real aircraft, ships, lightning strikes and the ISS live: aircraft from the OpenSky Network (no account needed), ships from AISStream.io (free API key), lightning from the volunteer network Blitzortung.org, the ISS orbit from CelesTrak. Whole world or Europe, DACH, North America, East Asia. German, English or Spanish.",
+      "version": "0.3.3",
+      "updated": "2026-10-18T20:50:00Z",
+      "thumbnails": [
+        "plugin_packs/world-map-live/thumb.webp"
+      ],
+      "download_url": "plugin_packs/world-map-live/WorldMapLive.zip",
+      "size": 159440,
+      "checksum": "89816eb12448f4d3e81f0e237042e063b45bfab060ac14f5013318c0a1e18a86"
     }
   ]
 }
