@@ -93,6 +93,8 @@ from dynaframe_plugin_base import create_plugin
 
 plugin = create_plugin()
 
+import support_page
+
 _PROFILE_DIR = os.path.join(_plugin_dir, "browser-profile")
 _BROWSER_LOG = os.path.join(_plugin_dir, "browser.log")
 _DEBOUNCE_SECONDS = 0.4
@@ -872,8 +874,10 @@ def main():
     auto = _auto_seconds()
     plugin.log(f"WebPageButtonPlugin ready on GPIO{gpio_pin} (long press = {long_press} s, "
                f"automatic switching = {'off' if auto <= 0 else str(auto) + ' s'}).")
+    support_page.start(plugin)
     plugin.ready()
     _shutdown_event.wait()
+    support_page.stop(plugin)
 
 
 if __name__ == "__main__":

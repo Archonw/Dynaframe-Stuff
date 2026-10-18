@@ -78,6 +78,8 @@ MENU_TEXT_ELEMENT_ID = "playlist-menu-text-element"
 
 plugin = create_plugin()
 
+import support_page
+
 # Persistent HTTP session — reuses TCP connections instead of opening a new one
 # per request, avoiding repeated DNS lookups, TCP handshakes, and TLS negotiation.
 _http = requests.Session()
@@ -629,6 +631,8 @@ plugin.log(
     f"(lang={settings['long_press_seconds']}s, "
     f"Overlay-Timeout={settings['overlay_timeout_seconds']}s)."
 )
+support_page.start(plugin)
 plugin.ready()
 
 _shutdown_event.wait()
+support_page.stop(plugin)

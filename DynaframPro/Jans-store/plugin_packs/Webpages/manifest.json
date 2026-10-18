@@ -2,7 +2,7 @@
   "Name": "WebPageButtonPlugin",
   "Author": "Jan",
   "Description": "GPIO button control for web pages: a short press opens the first configured page full screen on top of the slideshow, each further short press switches to the next page (in tabs), a long press closes the browser. Optionally the pages can also switch automatically after a set time. YouTube links are shown as a full-screen player.",
-  "Version": "0.9",
+  "Version": "0.9.1",
   "DisplayName": "Web Page Button",
   "ManifestVersion": 1,
   "IconPath": null,
@@ -113,7 +113,12 @@
     }
   ],
   "OverlayDesigns": null,
-  "AdvancedSettings": null,
+  "AdvancedSettings": {
+    "Enabled": true,
+    "Label": "About & support",
+    "Description": "Report a problem, ask a question or buy Jan a coffee.",
+    "RequiresReady": false
+  },
   "Actions": [],
   "Compatibility": {
     "MinHostVersion": null,
@@ -125,13 +130,19 @@
       "x64"
     ],
     "RequiredFeatures": [
-      "permission-declarations-v1"
+      "permission-declarations-v1",
+      "advanced-settings"
     ]
   },
   "Permissions": [
     {
       "id": "background-execution",
       "reason": "Permanently monitors the GPIO button in the background.",
+      "scope": null
+    },
+    {
+      "id": "advanced-ui",
+      "reason": "Shows the About & support page with the issue link and the coffee button.",
       "scope": null
     }
   ],

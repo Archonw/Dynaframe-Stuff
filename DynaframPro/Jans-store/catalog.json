@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "generated": "2026-10-17T22:03:46Z",
+  "generated": "2026-10-18T09:40:52Z",
   "store": {
     "name": "Jan's Store",
     "author": "Jan",
@@ -14,14 +14,14 @@
       "title": "Playlist Button",
       "author": "Jan",
       "description": "GPIO button to select playlists via an overlay menu",
-      "version": "1.6.0",
-      "updated": "2026-10-07T20:19:57Z",
+      "version": "1.6.1",
+      "updated": "2026-10-18T09:32:45Z",
       "thumbnails": [
         "plugin_packs/playlist-button/thumb.webp"
       ],
       "download_url": "plugin_packs/playlist-button/playlist-button.zip",
-      "size": 20340,
-      "checksum": "c754ba372a8e565c7dc8014d1fe960f553843b7de9d64c0ea5d4f61aed6d8966"
+      "size": 24792,
+      "checksum": "df6012bf6a32fabd62b791609c71766b4b21befe8df889211b78298c57c488d4"
     },
     {
       "id": "webpage-button",
@@ -29,14 +29,14 @@
       "title": "Web Page Button",
       "author": "Jan",
       "description": "GPIO button that opens a web page full screen on top of the slideshow and closes it again with the next press",
-      "version": "0.9",
-      "updated": "2026-10-11T13:35:00Z",
+      "version": "0.9.1",
+      "updated": "2026-10-18T09:32:45Z",
       "thumbnails": [
         "plugin_packs/Webpages/thumb.webp"
       ],
       "download_url": "plugin_packs/Webpages/webpages.zip",
-      "size": 23892,
-      "checksum": "962adef48568816044041d68de405a7aa55372ae2de507246f2c4a4bfa7411e5"
+      "size": 28346,
+      "checksum": "b4b52aadf291b0b265272282a2fdae5ef145016375406dd059142d8a53e1e290"
     },
     {
       "id": "jellyfin-now-playing",
@@ -44,14 +44,14 @@
       "title": "Jellyfin Now Playing",
       "author": "Jan",
       "description": "Shows the cover of the movie, series or album a chosen Jellyfin user is watching right now.",
-      "version": "0.3.4",
-      "updated": "2026-10-13T13:39:01Z",
+      "version": "0.3.5",
+      "updated": "2026-10-18T09:32:45Z",
       "thumbnails": [
         "plugin_packs/jellyfin/thumb-v2.webp"
       ],
       "download_url": "plugin_packs/jellyfin/JellyfinNowPlaying.zip",
-      "size": 12309,
-      "checksum": "a8782606ccdcb351c2f283d9bcc8ddbf3a9ce93224a20b2e570a5688938d97d6"
+      "size": 16992,
+      "checksum": "93fc10ab00c27b6d2a194c7f78361540673bf041e5b9fbb84943003bd97f9470"
     },
     {
       "id": "fussball-live",
@@ -59,8 +59,8 @@
       "title": "Fußball Live",
       "author": "Jan",
       "description": "Live scores, matchdays and tables for Bundesliga, Champions League, English, Scottish and Spanish leagues and cups, the World Cup and more. Installs the plugin together with its scene and can show it over the running playlist every few minutes. Pick your club to show its crest in the background and its colours as accent. German, English or Spanish.",
-      "version": "0.4.1",
-      "updated": "2026-10-17T21:33:11Z",
+      "version": "0.4.2",
+      "updated": "2026-10-18T09:18:55Z",
       "thumbnails": [
         "plugin_packs/fussball-live/thumb.webp",
         "plugin_packs/fussball-live/thumb-bl1.webp",
@@ -68,8 +68,8 @@
         "plugin_packs/fussball-live/thumb-ucl.webp"
       ],
       "download_url": "plugin_packs/fussball-live/FussballLive.zip",
-      "size": 85079,
-      "checksum": "139943ed94fb60896f1babf762bc7b39ee713a2e5961acd1051e9d8925d8986d"
+      "size": 88137,
+      "checksum": "a65214b705853a09e762bf7d3406b1e4e6683a2684b54a27c9d44d8e013598c5"
     },
     {
       "id": "american-football-live",
@@ -77,16 +77,16 @@
       "title": "American Football Live",
       "author": "Jan",
       "description": "Live scores, weeks and standings for the NFL, College Football (Top 25, SEC, Big Ten, Big 12, ACC), UFL and CFL. Installs the plugin together with its scene and can show it over the running playlist every few minutes or on a touchdown. Pick your team to show its logo in the background and its colours as accent. German, English or Spanish.",
-      "version": "0.2.2",
-      "updated": "2026-10-17T22:03:46Z",
+      "version": "0.2.3",
+      "updated": "2026-10-18T09:18:55Z",
       "thumbnails": [
         "plugin_packs/american-football-live/thumb.webp",
         "plugin_packs/american-football-live/thumb-landscape.webp",
         "plugin_packs/american-football-live/thumb-portrait.webp"
       ],
       "download_url": "plugin_packs/american-football-live/AmericanFootballLive.zip",
-      "size": 77461,
-      "checksum": "f8313c2e7a658f47876942eb3f5711f30e84316c1392a3392ac8576a03834c90"
+      "size": 80533,
+      "checksum": "99debdb12d8bc6ff37678cf5b56f632d5268f02364b123ab72280f7796789b13"
     }
   ]
 }
