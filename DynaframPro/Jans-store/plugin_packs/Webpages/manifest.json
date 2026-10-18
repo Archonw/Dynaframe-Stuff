@@ -2,7 +2,7 @@
   "Name": "WebPageButtonPlugin",
   "Author": "Jan",
   "Description": "GPIO button control for web pages: a short press opens the first configured page full screen on top of the slideshow, each further short press switches to the next page (in tabs), a long press closes the browser. Optionally the pages can also switch automatically after a set time. YouTube links are shown as a full-screen player.",
-  "Version": "0.9.1",
+  "Version": "0.9.4",
   "DisplayName": "Web Page Button",
   "ManifestVersion": 1,
   "IconPath": null,
@@ -11,10 +11,10 @@
   "Settings": [
     {
       "Name": "GpioPin",
-      "Type": "number",
-      "Description": "BCM pin number of the button (default: GPIO20). Restart the plugin after changing it.",
-      "DefaultValue": 20,
-      "Value": 20
+      "Type": "string",
+      "Description": "BCM pin number of your button, e.g. 20. Empty after installation: enter a pin that is not used by another plugin or device. A change takes effect within a few seconds.",
+      "DefaultValue": "",
+      "Value": ""
     },
     {
       "Name": "Urls",
@@ -26,7 +26,7 @@
     {
       "Name": "LongPressSeconds",
       "Type": "number",
-      "Description": "Hold time in seconds from which a press counts as long and closes the browser. Restart the plugin after changing it.",
+      "Description": "Hold time in seconds from which a press counts as long and closes the browser.",
       "DefaultValue": 2,
       "Value": 2
     },
@@ -131,7 +131,8 @@
     ],
     "RequiredFeatures": [
       "permission-declarations-v1",
-      "advanced-settings"
+      "advanced-settings",
+      "sse-events"
     ]
   },
   "Permissions": [

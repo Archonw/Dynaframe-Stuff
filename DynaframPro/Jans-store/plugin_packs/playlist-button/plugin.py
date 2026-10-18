@@ -521,7 +521,6 @@ def sync_overlay_style(overlay_file, font_size):
 # Setup
 # --------------------------------------------------------------------------
 settings = {
-    "gpio_pin": int(plugin.get_setting("GpioPin", 21)),
     "long_press_seconds": float(plugin.get_setting("LongPressSeconds", 1.5)),
     "overlay_timeout_seconds": float(plugin.get_setting("OverlayTimeoutSeconds", 10)),
     "overlay_file": plugin.get_setting("OverlayFileName", "default.json"),
@@ -534,10 +533,6 @@ settings = {
 }
 
 
-ensure_overlay_design(settings["overlay_file"])
-sync_overlay_style(settings["overlay_file"], settings["font_size"])
-
-
 def on_sync_style_action(_context):
     current_font_size = plugin.get_setting("FontSize", 32)
     sync_overlay_style(settings["overlay_file"], current_font_size)
@@ -546,6 +541,17 @@ def on_sync_style_action(_context):
 
 plugin.on_action("sync-style", on_sync_style_action)
 plugin.connect_sse()
+
+# Report ready before touching the overlay or the GPIO, so a missing or busy pin
+# can never leave the plugin stuck in "waiting for plugin to finish initializing".
+support_page.start(plugin)
+plugin.ready()
+
+try:
+    ensure_overlay_design(settings["overlay_file"])
+    sync_overlay_style(settings["overlay_file"], settings["font_size"])
+except Exception as exc:
+    plugin.log(f"Overlay-Design konnte nicht vorbereitet werden: {exc}", level="error")
 
 
 def on_held():
@@ -615,24 +621,83 @@ def _find_gpio_pin_factory():
     return None
 
 
-button = Button(
-    settings["gpio_pin"],
-    pull_up=True,
-    bounce_time=0.05,
-    hold_time=settings["long_press_seconds"],
-    hold_repeat=False,
-    pin_factory=_find_gpio_pin_factory(),
-)
-button.when_held = on_held
-button.when_released = on_released
+_button = None
+_button_key = None
+_pin_factory = None
+_pin_factory_done = False
 
-plugin.log(
-    f"PlaylistButtonPlugin bereit auf GPIO{settings['gpio_pin']} "
-    f"(lang={settings['long_press_seconds']}s, "
-    f"Overlay-Timeout={settings['overlay_timeout_seconds']}s)."
-)
-support_page.start(plugin)
-plugin.ready()
+
+def _gpio_pin():
+    """BCM-Pin aus den Settings, oder None solange kein (gueltiger) Pin eingetragen ist."""
+    raw = str(plugin.get_setting("GpioPin", "") or "").strip()
+    try:
+        pin = int(float(raw))
+    except ValueError:
+        return None
+    return pin if 0 <= pin <= 27 else None
+
+
+def _setup_button():
+    """Legt den Taster fuer den eingestellten Pin an. Wirft nie; ein belegter Pin wird nur geloggt."""
+    global _button, _button_key, _pin_factory, _pin_factory_done
+    pin = _gpio_pin()
+    try:
+        long_press = max(0.5, float(plugin.get_setting("LongPressSeconds", 1.5)))
+    except (TypeError, ValueError):
+        long_press = 1.5
+    key = (pin, long_press)
+    if key == _button_key:
+        return
+    _button_key = key
+    settings["long_press_seconds"] = long_press
+    if _button is not None:
+        try:
+            _button.close()
+        except Exception:
+            pass
+        _button = None
+    if pin is None:
+        plugin.log("No GPIO pin set yet. Enter the BCM pin of your button under GpioPin "
+                   "in the plugin settings (for example 21).", level="warning")
+        return
+    if not _pin_factory_done:
+        _pin_factory = _find_gpio_pin_factory()
+        _pin_factory_done = True
+    try:
+        button = Button(
+            pin,
+            pull_up=True,
+            bounce_time=0.05,
+            hold_time=long_press,
+            hold_repeat=False,
+            pin_factory=_pin_factory,
+        )
+    except Exception as exc:
+        plugin.log(f"GPIO{pin} cannot be used: {exc}. It is probably taken by another plugin "
+                   "or device; choose a different pin under GpioPin.", level="error")
+        return
+    button.when_held = on_held
+    button.when_released = on_released
+    _button = button
+    plugin.log(
+        f"PlaylistButtonPlugin bereit auf GPIO{pin} "
+        f"(lang={long_press}s, "
+        f"Overlay-Timeout={settings['overlay_timeout_seconds']}s)."
+    )
+
+
+def _button_loop():
+    """Uebernimmt geaenderte GpioPin/LongPressSeconds ohne Neustart des Plugins."""
+    while True:
+        try:
+            _setup_button()
+        except Exception as exc:
+            plugin.log(f"Taster-Einrichtung fehlgeschlagen: {exc}", level="error")
+        if _shutdown_event.wait(5):
+            break
+
+
+threading.Thread(target=_button_loop, name="button", daemon=True).start()
 
 _shutdown_event.wait()
 support_page.stop(plugin)

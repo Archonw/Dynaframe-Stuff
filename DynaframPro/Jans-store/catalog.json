@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "generated": "2026-10-18T09:40:52Z",
+  "generated": "2026-10-18T11:45:37Z",
   "store": {
     "name": "Jan's Store",
     "author": "Jan",
@@ -14,14 +14,14 @@
       "title": "Playlist Button",
       "author": "Jan",
       "description": "GPIO button to select playlists via an overlay menu",
-      "version": "1.6.1",
-      "updated": "2026-10-18T09:32:45Z",
+      "version": "1.6.2",
+      "updated": "2026-10-18T11:24:45Z",
       "thumbnails": [
         "plugin_packs/playlist-button/thumb.webp"
       ],
       "download_url": "plugin_packs/playlist-button/playlist-button.zip",
-      "size": 24792,
-      "checksum": "df6012bf6a32fabd62b791609c71766b4b21befe8df889211b78298c57c488d4"
+      "size": 25540,
+      "checksum": "1c6a463b288383725f29718a0b7ecbbc9e5ea113b013c26243e53c5a3f4e0061"
     },
     {
       "id": "webpage-button",
@@ -29,14 +29,14 @@
       "title": "Web Page Button",
       "author": "Jan",
       "description": "GPIO button that opens a web page full screen on top of the slideshow and closes it again with the next press",
-      "version": "0.9.1",
-      "updated": "2026-10-18T09:32:45Z",
+      "version": "0.9.4",
+      "updated": "2026-10-18T11:36:58Z",
       "thumbnails": [
         "plugin_packs/Webpages/thumb.webp"
       ],
       "download_url": "plugin_packs/Webpages/webpages.zip",
-      "size": 28346,
-      "checksum": "b4b52aadf291b0b265272282a2fdae5ef145016375406dd059142d8a53e1e290"
+      "size": 28993,
+      "checksum": "057d771cc9bf100ddd1a05dfb488848fe6f9c10b5e7df04ec4d5b7c42bd5be35"
     },
     {
       "id": "jellyfin-now-playing",

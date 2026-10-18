@@ -844,41 +844,104 @@ def _shutdown(*_args):
     _shutdown_event.set()
 
 
+_button = None
+_button_key = None
+_pin_factory = None
+_pin_factory_done = False
+
+
+def _gpio_pin():
+    """BCM pin from the settings, or None while no (valid) pin is entered."""
+    raw = str(plugin.get_setting("GpioPin", "") or "").strip()
+    try:
+        pin = int(float(raw))
+    except ValueError:
+        return None
+    return pin if 0 <= pin <= 27 else None
+
+
+def _setup_button():
+    """Create the button for the configured pin. Never raises; a busy pin is only logged."""
+    global _button, _button_key, _pin_factory, _pin_factory_done
+    pin = _gpio_pin()
+    try:
+        long_press = max(0.5, float(plugin.get_setting("LongPressSeconds", 2)))
+    except (TypeError, ValueError):
+        long_press = 2.0
+    key = (pin, long_press)
+    if key == _button_key:
+        return
+    _button_key = key
+    if _button is not None:
+        try:
+            _button.close()
+        except Exception:
+            pass
+        _button = None
+    if pin is None:
+        plugin.log("No GPIO pin set yet. Enter the BCM pin of your button under GpioPin "
+                   "in the plugin settings (for example 20).", level="warning")
+        return
+    if not _pin_factory_done:
+        _pin_factory = _find_gpio_pin_factory()
+        _pin_factory_done = True
+    try:
+        button = Button(
+            pin,
+            pull_up=True,
+            bounce_time=0.05,
+            hold_time=long_press,
+            hold_repeat=False,
+            pin_factory=_pin_factory,
+        )
+    except Exception as exc:
+        plugin.log(f"GPIO{pin} cannot be used: {exc}. It is probably taken by another plugin "
+                   "or device; choose a different pin under GpioPin.", level="error")
+        return
+    button.when_held = on_held
+    button.when_released = on_released
+    _button = button
+    auto = _auto_seconds()
+    plugin.log(f"WebPageButtonPlugin ready on GPIO{pin} (long press = {long_press} s, "
+               f"automatic switching = {'off' if auto <= 0 else str(auto) + ' s'}).")
+
+
+def _button_loop():
+    """Apply a changed GpioPin or LongPressSeconds without restarting the plugin."""
+    while True:
+        try:
+            _setup_button()
+        except Exception as exc:
+            plugin.log(f"Button setup failed: {exc}", level="error")
+        if _shutdown_event.wait(5):
+            break
+
+
 # --------------------------------------------------------------------------
 # Setup
 # --------------------------------------------------------------------------
 def main():
-    gpio_pin = int(plugin.get_setting("GpioPin", 20))
-    long_press = max(0.5, float(plugin.get_setting("LongPressSeconds", 2)))
-
     signal.signal(signal.SIGTERM, _shutdown)
     signal.signal(signal.SIGINT, _shutdown)
     atexit.register(close_page)
+    support_page.start(plugin)
+    # The Plugins page only leaves "waiting for plugin to finish initializing"
+    # once the plugin has its event connection; every working plugin opens it
+    # before ready().
+    plugin.connect_sse()
+    # Report ready before touching the GPIO, so a missing or busy pin can never
+    # leave the plugin stuck in "waiting for plugin to finish initializing".
+    plugin.ready()
     _kill_leftovers()
     start_wrapper_server()
 
-    button = Button(
-        gpio_pin,
-        pull_up=True,
-        bounce_time=0.05,
-        hold_time=long_press,
-        hold_repeat=False,
-        pin_factory=_find_gpio_pin_factory(),
-    )
-    button.when_held = on_held
-    button.when_released = on_released
     threading.Thread(target=_auto_loop, name="auto-switch", daemon=True).start()
     _refresh_preload_cfg()
     threading.Thread(target=_preload_loop, name="preload", daemon=True).start()
+    threading.Thread(target=_button_loop, name="button", daemon=True).start()
 
-    auto = _auto_seconds()
-    plugin.log(f"WebPageButtonPlugin ready on GPIO{gpio_pin} (long press = {long_press} s, "
-               f"automatic switching = {'off' if auto <= 0 else str(auto) + ' s'}).")
-    support_page.start(plugin)
-    plugin.ready()
     _shutdown_event.wait()
     support_page.stop(plugin)
-
 
 if __name__ == "__main__":
     main()

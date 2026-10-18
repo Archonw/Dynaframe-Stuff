@@ -2,7 +2,7 @@
   "Name": "PlaylistButtonPlugin",
   "Author": "Jan",
   "Description": "GPIO button control for playlists: short print opens an overlay menu with all playlists (alphabetical, current ones marked) and scrolls through the list when pressed again briefly. After 10 seconds of inactivity, the overlay closes again without changing the active playlist. A long key press takes over the playlist marked in the menu as a new active playlist.",
-  "Version": "1.6.1",
+  "Version": "1.6.2",
   "DisplayName": "Playlist Button",
   "ManifestVersion": 1,
   "IconPath": null,
@@ -11,10 +11,10 @@
   "Settings": [
     {
       "Name": "GpioPin",
-      "Type": "number",
-      "Description": "BCM-Pin-number of the button (standard: GPIO21)",
-      "DefaultValue": 21,
-      "Value": 21
+      "Type": "string",
+      "Description": "BCM pin number of your button, e.g. 21. Empty after installation: enter a pin that is not used by another plugin or device. A change takes effect within a few seconds.",
+      "DefaultValue": "",
+      "Value": ""
     },
     {
       "Name": "LongPressSeconds",
@@ -94,7 +94,7 @@
       "type": "background",
       "id": "PlaylistButtonPlugin.Background",
       "friendlyName": "Playlist Button Runtime",
-      "description": "Permanently monitors GPIO21 and controls playlist changes via the Slideshow API.",
+      "description": "Permanently monitors the GPIO button and controls playlist changes via the Slideshow API.",
       "events": null,
       "eventParameters": null
     }
