@@ -94,14 +94,14 @@
       "title": "World Map Live",
       "author": "Jan",
       "description": "A calm world map with borders, day and night and the day-night line that shows real aircraft, ships, lightning strikes and the ISS live: aircraft from the OpenSky Network (no account needed), ships from AISStream.io (free API key), lightning from the volunteer network Blitzortung.org, the ISS orbit from CelesTrak. Whole world or Europe, DACH, North America, East Asia. German, English or Spanish.",
-      "version": "0.3.3",
-      "updated": "2026-10-18T20:50:00Z",
+      "version": "0.3.4",
+      "updated": "2026-10-19T11:55:00Z",
       "thumbnails": [
         "plugin_packs/world-map-live/thumb.webp"
       ],
       "download_url": "plugin_packs/world-map-live/WorldMapLive.zip",
-      "size": 159440,
-      "checksum": "89816eb12448f4d3e81f0e237042e063b45bfab060ac14f5013318c0a1e18a86"
+      "size": 159614,
+      "checksum": "1306e7e1e51eb6bc8835be689364a281838fd4a7a8c9067811d77a15d39b34bf"
     }
   ]
 }
