@@ -62,7 +62,8 @@
       "version": "0.4.3",
       "updated": "2026-10-18T11:49:55Z",
       "thumbnails": [
-        "plugin_packs/fussball-live/thumb.webp",
+        "plugin_packs/fussball-live/thumb-hero.webp",
+        "plugin_packs/fussball-live/thumb-landscape.webp",
         "plugin_packs/fussball-live/thumb-bl1.webp",
         "plugin_packs/fussball-live/thumb-bl2.webp",
         "plugin_packs/fussball-live/thumb-ucl.webp"
@@ -80,7 +81,7 @@
       "version": "0.2.4",
       "updated": "2026-10-18T11:49:55Z",
       "thumbnails": [
-        "plugin_packs/american-football-live/thumb.webp",
+        "plugin_packs/american-football-live/thumb-hero.webp",
         "plugin_packs/american-football-live/thumb-landscape.webp",
         "plugin_packs/american-football-live/thumb-portrait.webp"
       ],
